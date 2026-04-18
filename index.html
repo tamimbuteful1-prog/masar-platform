@@ -7,6 +7,8 @@
     <!-- خطوط عربية وأيقونات -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js لعرض الرسوم البيانية في صفحة الطالب -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <style>
         /* المتغيرات اللونية حسب الهوية البصرية */
@@ -24,7 +26,48 @@
             --border-radius: 12px;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             --transition: all 0.3s ease;
+            --text-main: #1f2937;
+            --border-color: #e5e7eb;
+            --input-bg: #ffffff;
         }
+
+        /* === Dark Mode === */
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #e2e8f0;
+            --text-grey: #94a3b8;
+            --border-color: #334155;
+            --dark-title: #a78bfa;
+            --input-bg: #334155;
+        }
+        body.dark-mode .header { background-color: rgba(30, 41, 59, 0.8) !important; }
+        body.dark-mode .form-input,
+        body.dark-mode .form-select {
+            background-color: var(--input-bg) !important;
+            color: var(--text-main) !important;
+            border-color: var(--border-color) !important;
+        }
+        body.dark-mode th { background-color: #334155 !important; color: var(--text-grey); }
+        body.dark-mode td { color: var(--text-main); border-color: var(--border-color); }
+        body.dark-mode tr:hover { background-color: #334155 !important; }
+        body.dark-mode .stat-icon { background-color: #312e81; }
+        body.dark-mode .nav-link:hover,
+        body.dark-mode .nav-link.active { background-color: #312e81; color: #c4b5fd; }
+        body.dark-mode .filters-bar,
+        body.dark-mode .leaderboard-list,
+        body.dark-mode .table-container,
+        body.dark-mode .explorer-card,
+        body.dark-mode .stat-card,
+        body.dark-mode .chart-container,
+        body.dark-mode .modal { background: var(--card-bg) !important; color: var(--text-main); }
+        body.dark-mode .lb-item { border-color: var(--border-color); }
+        body.dark-mode .btn-secondary { background: var(--card-bg); color: var(--primary); }
+        body.dark-mode .track-row { background: #334155; border-color: var(--border-color); }
+        body.dark-mode .track-row input { background: #1e293b; color: var(--text-main); border-color: var(--border-color); }
+        body.dark-mode .login-card { background: var(--card-bg); color: var(--text-main); }
+        body.dark-mode .login-view { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); }
+        body.dark-mode .guest-view { color: var(--text-main); }
 
         * {
             box-sizing: border-box;
@@ -36,9 +79,10 @@
         body {
             font-family: 'Cairo', sans-serif;
             background-color: var(--bg-color);
-            color: #1f2937;
+            color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* --- شاشة التحميل الأولى --- */
@@ -83,6 +127,7 @@
             border-radius: 8px;
             border: 1px solid #e5e7eb;
         }
+        body.dark-mode .view-mode-toggle { background: #334155; border-color: #475569; }
 
         .mode-btn {
             background: transparent;
@@ -110,6 +155,26 @@
             box-shadow: 0 2px 4px rgba(124, 92, 255, 0.3);
         }
 
+        /* --- Dark Mode Toggle Button --- */
+        .theme-toggle-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-grey);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: var(--transition);
+        }
+        .theme-toggle-btn:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
         /* --- نظام الدخول (Login View) --- */
         .login-view {
             position: fixed;
@@ -122,6 +187,7 @@
             justify-content: center;
             align-items: center;
             z-index: 2000;
+            padding: 20px;
         }
 
         .login-view.active {
@@ -134,7 +200,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             text-align: center;
             border: 1px solid #e5e7eb;
         }
@@ -143,6 +209,7 @@
         .login-subtitle { color: var(--text-grey); margin-bottom: 2rem; font-size: 0.9rem; }
         .form-group { margin-bottom: 1.5rem; text-align: right; }
         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151; font-size: 0.9rem; }
+        body.dark-mode .form-group label { color: var(--text-main); }
         .form-input {
             width: 100%;
             padding: 12px;
@@ -151,6 +218,8 @@
             font-family: inherit;
             font-size: 1rem;
             transition: var(--transition);
+            background: var(--input-bg);
+            color: var(--text-main);
         }
         .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.1); }
         .btn-login {
@@ -166,6 +235,7 @@
             transition: var(--transition);
         }
         .btn-login:hover { background-color: var(--dark-title); transform: translateY(-2px); }
+        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         
         .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake {
@@ -174,6 +244,36 @@
             30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
+
+        /* --- Login Tabs (Admin / Student) --- */
+        .login-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 2rem;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 10px;
+        }
+        body.dark-mode .login-tabs { background: #334155; }
+        .login-tab {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-grey);
+            transition: var(--transition);
+        }
+        .login-tab.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        body.dark-mode .login-tab.active { background: var(--card-bg); }
 
         /* --- Guest View (Public) --- */
         .guest-view {
@@ -195,6 +295,7 @@
             flex-wrap: wrap;
             gap: 1rem;
         }
+        body.dark-mode .guest-header { border-color: var(--border-color); }
 
         .btn-admin-login {
             background-color: var(--dark-title);
@@ -215,6 +316,41 @@
 
         .btn-admin-login:hover { background-color: var(--primary); box-shadow: 0 4px 12px rgba(124, 92, 255, 0.3); }
 
+        /* --- Public search bar --- */
+        .public-search-wrap {
+            background: white;
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 1rem 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--border-color);
+        }
+        body.dark-mode .public-search-wrap { background: var(--card-bg); }
+        .public-search-wrap input {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            background: transparent;
+            color: var(--text-main);
+        }
+        .public-search-wrap i { color: var(--primary); font-size: 1.2rem; }
+        .public-search-results {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-top: -1rem;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        body.dark-mode .public-search-results { background: var(--card-bg); }
+        .public-search-results .lb-item { cursor: default; }
+
         /* --- Admin Layout (The Main App) --- */
         .admin-layout {
             display: flex;
@@ -234,6 +370,7 @@
             overflow: hidden;
             display: none;
         }
+        body.dark-mode .animated-bg { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); }
 
         body.home-view .animated-bg { display: block; }
 
@@ -245,6 +382,7 @@
             user-select: none;
             animation: floatUp 20s linear infinite;
         }
+        body.dark-mode .floating-symbol { opacity: 0.15; }
 
         @keyframes floatUp { 0% { transform: translateY(100vh) rotate(0deg); } 100% { transform: translateY(-10vh) rotate(360deg); } }
 
@@ -252,7 +390,7 @@
         .sidebar {
             width: 260px;
             background-color: var(--card-bg);
-            border-left: 1px solid #e5e7eb;
+            border-left: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             padding: 1.5rem;
@@ -318,6 +456,7 @@
             gap: 8px;
             border: 1px solid #e5e7eb;
         }
+        body.dark-mode .connection-status { background: var(--card-bg); border-color: var(--border-color); }
         .connection-status.connected { color: var(--success); }
         .connection-status.disconnected { color: var(--danger); }
         .connection-dot {
@@ -366,7 +505,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0 2rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
         }
         .toggle-menu { display: none; font-size: 1.2rem; cursor: pointer; color: var(--text-grey); }
         .admin-profile { display: flex; align-items: center; gap: 12px; }
@@ -410,13 +549,15 @@
         .btn-secondary:hover { background-color: #F3EEFF; }
         .btn-icon { padding: 6px; border-radius: 6px; background: transparent; color: var(--text-grey); font-size: 1rem; cursor: pointer; border: none; }
         .btn-icon:hover { background-color: #f3f4f6; color: var(--primary); }
+        body.dark-mode .btn-icon:hover { background-color: #334155; }
         .btn-icon.edit:hover { color: var(--primary); }
         .btn-icon.delete:hover { color: var(--danger); background-color: #fef2f2; }
+        body.dark-mode .btn-icon.delete:hover { background-color: #450a0a; }
 
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
         .stat-card {
             background: var(--card-bg); padding: 1.5rem; border-radius: var(--border-radius);
-            box-shadow: var(--shadow); border: 1px solid #f3f4f6;
+            box-shadow: var(--shadow); border: 1px solid var(--border-color);
             display: flex; flex-direction: column; justify-content: space-between;
         }
         .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
@@ -438,6 +579,7 @@
         .status-success { background-color: #dcfce7; color: #166534; }
         .status-warning { background-color: #fef9c3; color: #854d0e; }
         .status-danger { background-color: #fee2e2; color: #991b1b; }
+        .status-info { background-color: #dbeafe; color: #1e40af; }
         .status-fire { background-color: #ffedd5; color: #c2410c; border: 1px solid #fb923c; }
         .xp-tag { background-color: #fffbeb; color: #b45309; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px; }
 
@@ -451,6 +593,7 @@
         .progress-container { margin: 15px 0; }
         .progress-label { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem; color: var(--text-grey); }
         .progress-bar-bg { background-color: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; }
+        body.dark-mode .progress-bar-bg { background-color: #334155; }
         .progress-bar-fill { background-color: var(--primary); height: 100%; border-radius: 4px; transition: width 1s ease-in-out; }
 
         .filters-bar { background: white; padding: 1rem; border-radius: var(--border-radius); box-shadow: var(--shadow); margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
@@ -459,6 +602,7 @@
         .form-select, .form-input {
             padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;
             font-family: inherit; font-size: 0.9rem; min-width: 150px;
+            background: var(--input-bg); color: var(--text-main);
         }
         .form-input:focus, .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.1); }
 
@@ -466,15 +610,17 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center;
             align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: var(--transition);
+            padding: 20px;
         }
         .modal-overlay.open { opacity: 1; visibility: visible; }
         .modal {
             background: white; padding: 2rem; border-radius: var(--border-radius); width: 100%;
             max-width: 500px; transform: scale(0.9); transition: var(--transition);
+            max-height: 90vh; overflow-y: auto;
         }
         .modal-overlay.open .modal { transform: scale(1); }
         .modal-title { margin-bottom: 1.5rem; color: var(--dark-title); font-size: 1.25rem; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem; flex-wrap: wrap; }
 
         .toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
         .toast {
@@ -483,7 +629,9 @@
             border-right: 4px solid var(--primary); display: flex; align-items: center; gap: 10px;
             animation: slideIn 0.3s ease; min-width: 250px;
             transition: opacity 0.3s ease;
+            color: var(--text-main);
         }
+        body.dark-mode .toast { background: var(--card-bg); }
         .toast.success { border-right-color: var(--success); }
         .toast.danger { border-right-color: var(--danger); }
         .toast.info { border-right-color: var(--primary); }
@@ -526,6 +674,7 @@
             background: #f0fdf4;
             border-color: #86efac;
         }
+        body.dark-mode .track-row input.saved { background: #14532d; color: #bbf7d0; border-color: #16a34a; }
         .btn-track {
             width: 36px;
             height: 36px;
@@ -555,6 +704,246 @@
             background: var(--danger);
             color: white;
             transform: scale(1.05);
+        }
+
+        /* ========================================= */
+        /* ============ STUDENT DASHBOARD ========== */
+        /* ========================================= */
+        .student-layout {
+            display: none;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        .student-layout.active { display: flex; }
+
+        .student-header {
+            background: var(--card-bg);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .student-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark-title) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            margin: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: 0 10px 25px rgba(124, 92, 255, 0.3);
+        }
+
+        .student-hero-info h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.3rem;
+        }
+        .student-hero-info p { opacity: 0.9; font-size: 0.95rem; }
+
+        .student-xp-big {
+            background: rgba(255,255,255,0.15);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .student-xp-big .num { font-size: 2.5rem; font-weight: 800; }
+        .student-xp-big .label { font-size: 0.85rem; opacity: 0.9; }
+
+        .student-content { padding: 0 2rem 2rem; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        .student-nav {
+            display: flex;
+            gap: 0;
+            background: var(--card-bg);
+            padding: 6px;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+        .student-nav-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--text-grey);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .student-nav-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        .student-nav-btn:not(.active):hover {
+            background: #F3EEFF;
+            color: var(--primary);
+        }
+        body.dark-mode .student-nav-btn:not(.active):hover { background: #312e81; }
+
+        .student-section { display: none; animation: fadeIn 0.3s ease; }
+        .student-section.active { display: block; }
+
+        /* --- Task Card --- */
+        .task-card {
+            background: var(--card-bg);
+            padding: 1.25rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+            border-right: 4px solid var(--primary);
+            border: 1px solid var(--border-color);
+            border-right-width: 4px;
+        }
+        .task-card.done { border-right-color: var(--success); }
+        .task-card.not_done { border-right-color: var(--danger); }
+        .task-card.pending { border-right-color: var(--warning); }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .task-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--text-main);
+        }
+        .task-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-grey);
+        }
+        .task-meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+        /* Reason box for not_done */
+        .task-reason-box {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+        }
+        body.dark-mode .task-reason-box { background: #450a0a; border-color: #991b1b; }
+        .task-reason-box h4 {
+            color: var(--danger);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .reason-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 0.75rem;
+        }
+        .reason-chip {
+            padding: 6px 14px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            transition: var(--transition);
+        }
+        body.dark-mode .reason-chip { background: var(--card-bg); border-color: var(--border-color); }
+        .reason-chip:hover { border-color: var(--primary); color: var(--primary); }
+        .reason-chip.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .reason-solution {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 80px;
+            background: var(--input-bg);
+            color: var(--text-main);
+        }
+        .reason-solution:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.1); }
+
+        /* Admin reason badge (on admin side) */
+        .admin-task-reason-view {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        body.dark-mode .admin-task-reason-view { background: #431407; border-color: #9a3412; color: #fed7aa; }
+
+        /* Dark Mode Switch in Settings */
+        .theme-switch-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        body.dark-mode .theme-switch-row { background: #334155; }
+
+        /* XP Rules grid */
+        .xp-rules-grid {
+            display: grid;
+            grid-template-columns: 1fr 120px;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .xp-rules-grid input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            background: var(--input-bg);
+            color: var(--text-main);
+        }
+
+        /* Student profile avatar */
+        .student-avatar-big {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.4);
+            object-fit: cover;
         }
         
         /* --- RESPONSIVE & MANUAL MODE OVERRIDES --- */
@@ -595,6 +984,10 @@
                 flex-shrink: 0;
                 min-width: 80px;
             }
+
+            .student-hero { margin: 1rem; padding: 1.25rem; }
+            .student-content { padding: 0 1rem 1rem; }
+            .student-header { padding: 1rem; }
         }
 
         /* --- MANUAL MODE OVERRIDES --- */
@@ -675,7 +1068,7 @@
             top: auto;
             height: auto;
             box-shadow: none !important;
-            border-left: 1px solid #e5e7eb;
+            border-left: 1px solid var(--border-color);
         }
         
         body.desktop-mode .toggle-menu { display: none !important; }
@@ -716,18 +1109,47 @@
     <div id="login-view" class="login-view">
         <div class="login-card" id="login-card">
             <div class="login-logo"><i class="fas fa-route"></i> مجتمع مسار</div>
-            <p class="login-subtitle">بوابة المشرفين</p>
-            
-            <div class="form-group">
-                <label>اسم المستخدم</label>
-                <input type="text" id="username" class="form-input" placeholder="MASAR" autocomplete="username">
+            <p class="login-subtitle">بوابة الدخول</p>
+
+            <!-- Tabs: Admin vs Student -->
+            <div class="login-tabs">
+                <button type="button" class="login-tab active" id="tab-admin" onclick="switchLoginTab('admin')">
+                    <i class="fas fa-user-shield"></i> مشرف
+                </button>
+                <button type="button" class="login-tab" id="tab-student" onclick="switchLoginTab('student')">
+                    <i class="fas fa-user-graduate"></i> طالب
+                </button>
             </div>
-            <div class="form-group">
-                <label>كلمة المرور</label>
-                <input type="password" id="password" class="form-input" placeholder="•••••••" autocomplete="current-password">
+
+            <!-- Admin Form -->
+            <div id="admin-login-form">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" id="username" class="form-input" placeholder="MASAR" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" id="password" class="form-input" placeholder="•••••••" autocomplete="current-password">
+                </div>
+                <button type="button" class="btn-login" onclick="attemptLogin()">دخول المشرف</button>
             </div>
-            
-            <button type="button" class="btn-login" onclick="attemptLogin()">دخول المشرف</button>
+
+            <!-- Student Form (Firebase Auth) -->
+            <div id="student-login-form" style="display:none;">
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="student-email" class="form-input" placeholder="example@mail.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" id="student-password" class="form-input" placeholder="•••••••" autocomplete="current-password">
+                </div>
+                <button type="button" class="btn-login" id="student-login-btn" onclick="attemptStudentLogin()">دخول الطالب</button>
+                <small style="display:block; margin-top:10px; color:var(--text-grey); font-size:0.8rem;">
+                    احصل على حسابك من المشرف العام
+                </small>
+            </div>
+
             <button type="button" class="btn-admin-login" style="margin-top:15px; background:#f3f4f6; color:var(--text-grey); width:100%; justify-content:center;" onclick="showGuestView()">
                 <i class="fas fa-arrow-right"></i> العودة للصفحة العامة
             </button>
@@ -742,6 +1164,9 @@
             </div>
             
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <button class="theme-toggle-btn" onclick="toggleDarkMode()" title="الوضع الليلي">
+                    <i class="fas fa-moon" id="theme-icon-guest"></i>
+                </button>
                 <div class="view-mode-toggle">
                     <button id="guest-btn-mobile" class="mode-btn" onclick="setMobileMode()" title="وضع الجوال">
                         <i class="fas fa-mobile-alt"></i>
@@ -751,10 +1176,17 @@
                     </button>
                 </div>
                 <button class="btn-admin-login" onclick="showLoginView()">
-                    <i class="fas fa-user-shield"></i> دخول المشرف
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
                 </button>
             </div>
         </div>
+
+        <!-- Public Search Bar -->
+        <div class="public-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="public-search-input" placeholder="ابحث عن مستكشف بالاسم أو المسار..." oninput="runPublicSearch()">
+        </div>
+        <div id="public-search-results" class="public-search-results" style="display:none;"></div>
 
         <div style="display:flex; gap:20px; flex-wrap:wrap;">
              <div style="flex:1; min-width:300px;">
@@ -789,6 +1221,7 @@
                 <li class="nav-item"><a href="javascript:void(0)" class="nav-link" onclick="navigate('challenges')" data-target="challenges"><i class="fas fa-trophy"></i> التحديات</a></li>
                 <li class="nav-item"><a href="javascript:void(0)" class="nav-link" onclick="navigate('reports')" data-target="reports"><i class="fas fa-chart-line"></i> التقارير</a></li>
                 <li class="nav-item"><a href="javascript:void(0)" class="nav-link" onclick="navigate('explorers')" data-target="explorers"><i class="fas fa-compass"></i> المستكشفين</a></li>
+                <li class="nav-item"><a href="javascript:void(0)" class="nav-link" onclick="navigate('xp-rules')" data-target="xp-rules"><i class="fas fa-coins"></i> قواعد النقاط</a></li>
                 <li class="nav-item"><a href="javascript:void(0)" class="nav-link" onclick="navigate('settings')" data-target="settings"><i class="fas fa-cog"></i> الإعدادات</a></li>
             </ul>
         </aside>
@@ -806,6 +1239,10 @@
                             <i class="fas fa-desktop"></i>
                         </button>
                     </div>
+
+                    <button class="theme-toggle-btn" onclick="toggleDarkMode()" title="الوضع الليلي">
+                        <i class="fas fa-moon" id="theme-icon-admin"></i>
+                    </button>
                 </div>
                 
                 <div class="admin-profile">
@@ -854,7 +1291,7 @@
                     </div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>الاسم</th><th>المجال</th><th>نقاط XP</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                            <thead><tr><th>الاسم</th><th>البريد</th><th>المجال</th><th>نقاط XP</th><th>الحالة</th><th>إجراءات</th></tr></thead>
                             <tbody id="members-table-body"></tbody>
                         </table>
                     </div>
@@ -902,10 +1339,27 @@
                     <div class="explorer-grid" id="explorers-grid"></div>
                 </section>
 
-                <!-- 6. Settings Page -->
+                <!-- 6. XP Rules Page (جديدة) -->
+                <section id="xp-rules" class="section">
+                    <div class="page-header">
+                        <h1 class="page-title">قواعد نقاط XP</h1>
+                        <button class="btn btn-primary" onclick="addXpRule()"><i class="fas fa-plus"></i> إضافة قاعدة</button>
+                    </div>
+                    <div style="background:var(--card-bg); padding:1.5rem; border-radius:12px; box-shadow:var(--shadow); max-width:700px; border:1px solid var(--border-color);">
+                        <p style="color:var(--text-grey); margin-bottom:1rem; font-size:0.9rem;">
+                            <i class="fas fa-info-circle"></i> حدد عدد النقاط التي يحصل عليها الطالب عند كل نشاط. هذه القيم ستظهر للمشرف عند منح النقاط.
+                        </p>
+                        <div id="xp-rules-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+                        <button class="btn btn-primary" onclick="saveXpRules()" style="margin-top:1.5rem;">
+                            <i class="fas fa-save"></i> حفظ قواعد النقاط
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 7. Settings Page -->
                 <section id="settings" class="section">
                     <div class="page-header"><h1 class="page-title">الإعدادات</h1></div>
-                    <div style="background:white; padding:2rem; border-radius:12px; box-shadow:var(--shadow); max-width:600px;">
+                    <div style="background:var(--card-bg); padding:2rem; border-radius:12px; box-shadow:var(--shadow); max-width:600px; border:1px solid var(--border-color);">
                         <div class="form-group"><label>نقاط XP الافتراضية للتحدي</label><input type="number" id="default-xp" class="form-input" value="50"><small style="color:var(--text-grey); display:block; margin-top:5px;">هذه القيمة ستُستخدم تلقائياً عند إضافة تحدي جديد.</small></div>
                         
                         <div class="form-group">
@@ -919,7 +1373,7 @@
                         
                         <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:1rem;">حفظ جميع التعديلات</button>
                         
-                        <hr style="margin: 2rem 0; border: none; border-top: 1px solid #e5e7eb;">
+                        <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border-color);">
                         
                         <div style="background: #fef2f2; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca;">
                             <h4 style="color: var(--danger); margin-bottom: 0.5rem;">⚠️ منطقة الخطر</h4>
@@ -942,6 +1396,7 @@
                     <div class="cards-grid" style="margin-bottom: 2rem;">
                         <div class="stat-card"><div class="stat-label">المسار</div><div class="stat-value" id="detail-track">--</div></div>
                         <div class="stat-card"><div class="stat-label">نقاط XP</div><div class="stat-value" id="detail-xp" style="color:var(--xb-gold)">--</div></div>
+                        <div class="stat-card"><div class="stat-label">نسبة الإنجاز</div><div class="stat-value" id="detail-progress">0%</div></div>
                     </div>
                     <div style="margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                         <h3>سجل التحديات</h3>
@@ -949,7 +1404,7 @@
                     </div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>التحدي</th><th>الأسبوع</th><th>نقاط XP</th><th>الحالة</th></tr></thead>
+                            <thead><tr><th>التحدي</th><th>الأسبوع</th><th>نقاط XP</th><th>الحالة</th><th>السبب / الحل</th></tr></thead>
                             <tbody id="detail-table-body"></tbody>
                         </table>
                     </div>
@@ -959,13 +1414,154 @@
         </main>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- ============= 4. STUDENT DASHBOARD (NEW) =================== -->
+    <!-- ============================================================ -->
+    <div id="student-layout" class="student-layout">
+        <!-- Student Header -->
+        <div class="student-header">
+            <div class="logo" style="margin:0; cursor:default;">
+                <i class="fas fa-route"></i> مجتمع مسار
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <button class="theme-toggle-btn" onclick="toggleDarkMode()" title="الوضع الليلي">
+                    <i class="fas fa-moon" id="theme-icon-student"></i>
+                </button>
+                <div class="view-mode-toggle">
+                    <button id="student-btn-mobile" class="mode-btn" onclick="setMobileMode()" title="وضع الجوال">
+                        <i class="fas fa-mobile-alt"></i>
+                    </button>
+                    <button id="student-btn-desktop" class="mode-btn" onclick="setDesktopMode()" title="وضع الكمبيوتر">
+                        <i class="fas fa-desktop"></i>
+                    </button>
+                </div>
+                <button class="btn-admin-login" onclick="logout()" style="background:var(--danger);">
+                    <i class="fas fa-sign-out-alt"></i> خروج
+                </button>
+            </div>
+        </div>
+
+        <!-- Hero -->
+        <div class="student-hero">
+            <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                <img id="student-hero-avatar" src="https://picsum.photos/seed/student/100/100" class="student-avatar-big">
+                <div class="student-hero-info">
+                    <h2>أهلاً، <span id="student-hero-name">طالب</span> 👋</h2>
+                    <p>المسار: <span id="student-hero-track">--</span></p>
+                </div>
+            </div>
+            <div class="student-xp-big">
+                <div class="num" id="student-hero-xp">0</div>
+                <div class="label">نقطة XP</div>
+            </div>
+        </div>
+
+        <div class="student-content">
+            <!-- Student Nav -->
+            <div class="student-nav">
+                <button class="student-nav-btn active" onclick="showStudentSection('tasks')" data-st-target="tasks">
+                    <i class="fas fa-tasks"></i> مهام الأسبوع
+                </button>
+                <button class="student-nav-btn" onclick="showStudentSection('progress')" data-st-target="progress">
+                    <i class="fas fa-chart-line"></i> تقدمي
+                </button>
+                <button class="student-nav-btn" onclick="showStudentSection('leaderboard')" data-st-target="leaderboard">
+                    <i class="fas fa-trophy"></i> المتصدرين
+                </button>
+                <button class="student-nav-btn" onclick="showStudentSection('profile')" data-st-target="profile">
+                    <i class="fas fa-user-cog"></i> إعداداتي
+                </button>
+            </div>
+
+            <!-- Section: Tasks -->
+            <section id="student-section-tasks" class="student-section active">
+                <h3 style="margin-bottom:1rem; color:var(--dark-title);"><i class="fas fa-list-check"></i> مهامي</h3>
+                <div id="student-tasks-list"></div>
+            </section>
+
+            <!-- Section: Progress (Chart.js) -->
+            <section id="student-section-progress" class="student-section">
+                <h3 style="margin-bottom:1rem; color:var(--dark-title);"><i class="fas fa-chart-line"></i> تقدمي عبر الأسابيع</h3>
+                <div class="cards-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">مجموع نقاطي</div>
+                        <div class="stat-value" id="st-total-xp">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">المهام المنجزة</div>
+                        <div class="stat-value" id="st-done-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">نسبة الإنجاز</div>
+                        <div class="stat-value" id="st-rate">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">التقييم</div>
+                        <div class="stat-value" id="st-rating" style="font-size:1.2rem;">--</div>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="student-progress-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- Section: Leaderboard -->
+            <section id="student-section-leaderboard" class="student-section">
+                <h3 style="margin-bottom:1rem; color:var(--dark-title);"><i class="fas fa-trophy"></i> ترتيب المتصدرين</h3>
+                <div class="leaderboard-list" id="student-leaderboard"></div>
+            </section>
+
+            <!-- Section: Profile Settings -->
+            <section id="student-section-profile" class="student-section">
+                <h3 style="margin-bottom:1rem; color:var(--dark-title);"><i class="fas fa-user-cog"></i> إعداداتي الشخصية</h3>
+                <div style="background:var(--card-bg); padding:2rem; border-radius:12px; box-shadow:var(--shadow); max-width:600px; border:1px solid var(--border-color);">
+                    <div class="form-group">
+                        <label>الاسم</label>
+                        <input type="text" id="profile-name" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" id="profile-email" class="form-input" readonly style="background:#f3f4f6; cursor:not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label>الصورة الشخصية (رقم أو كلمة لتوليد الصورة)</label>
+                        <input type="text" id="profile-avatar" class="form-input" placeholder="مثل: 42 أو ali">
+                    </div>
+                    <div class="form-group">
+                        <label>نبذة عني</label>
+                        <textarea id="profile-bio" class="form-input" rows="3" style="resize:vertical; min-height:80px;"></textarea>
+                    </div>
+
+                    <div class="theme-switch-row" style="margin-bottom:1rem;">
+                        <div>
+                            <div style="font-weight:700;">🌙 الوضع الليلي</div>
+                            <div style="font-size:0.8rem; color:var(--text-grey);">تفعيل مظهر داكن مريح للعين</div>
+                        </div>
+                        <button class="theme-toggle-btn" onclick="toggleDarkMode()">
+                            <i class="fas fa-moon" id="theme-icon-profile"></i>
+                        </button>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveStudentProfile()" style="width:100%;">
+                        <i class="fas fa-save"></i> حفظ التعديلات
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+
     <!-- Modals -->
     <div class="modal-overlay" id="addMemberModal">
         <div class="modal">
             <h3 class="modal-title">إضافة عضو جديد</h3>
             <div class="form-group"><label>اسم الشخص</label><input type="text" id="new-member-name" class="form-input" placeholder="مثال: أحمد محمد"></div>
+            <div class="form-group"><label>البريد الإلكتروني (للدخول)</label><input type="email" id="new-member-email" class="form-input" placeholder="example@mail.com"></div>
+            <div class="form-group"><label>كلمة مرور مبدئية (6 أحرف على الأقل)</label><input type="text" id="new-member-password" class="form-input" placeholder="••••••"></div>
             <div class="form-group"><label>اختيار المسار</label><select id="new-member-track" class="form-select"></select></div>
-            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('addMemberModal')">إلغاء</button><button class="btn btn-primary" onclick="addNewMember()">حفظ</button></div>
+            <small style="color:var(--text-grey); display:block; margin-bottom:10px;">
+                <i class="fas fa-info-circle"></i> سيتم إنشاء حساب Firebase للطالب. اتركه للطالب ليغير كلمة المرور لاحقاً.
+            </small>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('addMemberModal')">إلغاء</button><button class="btn btn-primary" id="add-member-btn" onclick="addNewMember()">حفظ</button></div>
         </div>
     </div>
 
@@ -973,8 +1569,10 @@
         <div class="modal">
             <h3 class="modal-title">تعديل بيانات العضو</h3>
             <input type="hidden" id="edit-member-id">
-            <div class="form-group"><label>اسم العضو</label><input type="text" id="edit-member-name" class="form-input" readonly style="background:#f3f4f6;"></div>
+            <div class="form-group"><label>اسم العضو</label><input type="text" id="edit-member-name" class="form-input"></div>
+            <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="edit-member-email" class="form-input" readonly style="background:#f3f4f6;"></div>
             <div class="form-group"><label>تعديل المسار (التخصص)</label><select id="edit-member-track" class="form-select"></select></div>
+            <div class="form-group"><label>تعديل نقاط XP (مباشرة)</label><input type="number" id="edit-member-xp" class="form-input"></div>
             <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('editMemberModal')">إلغاء</button><button class="btn btn-primary" onclick="saveMemberEdit()">حفظ التعديلات</button></div>
         </div>
     </div>
@@ -987,19 +1585,15 @@
             <div class="form-group" style="display:flex; gap:10px;">
                 <div style="flex:1;"><label>الأسبوع</label><input type="number" id="challenge-week" class="form-input" value="1"></div>
                 <div style="flex:1;"><label>الشهر</label><select id="challenge-month" class="form-select">
-                    <option value="1">يناير</option>
-                    <option value="2">فبراير</option>
-                    <option value="3">مارس</option>
-                    <option value="4">أبريل</option>
-                    <option value="5">مايو</option>
-                    <option value="6">يونيو</option>
-                    <option value="7">يوليو</option>
-                    <option value="8">أغسطس</option>
-                    <option value="9">سبتمبر</option>
-                    <option value="10">أكتوبر</option>
-                    <option value="11">نوفمبر</option>
-                    <option value="12">ديسمبر</option>
+                    <option value="1">يناير</option><option value="2">فبراير</option><option value="3">مارس</option>
+                    <option value="4">أبريل</option><option value="5">مايو</option><option value="6">يونيو</option>
+                    <option value="7">يوليو</option><option value="8">أغسطس</option><option value="9">سبتمبر</option>
+                    <option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
                 </select></div>
+            </div>
+            <div class="form-group">
+                <label>نوع النشاط (يحدد نقاط XP من القواعد)</label>
+                <select id="challenge-rule" class="form-select" onchange="applyXpRuleToChallenge()"></select>
             </div>
             <div class="form-group"><label>نقاط XP</label><input type="number" id="challenge-xp" class="form-input" value="50"></div>
             <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('addChallengeModal')">إلغاء</button><button class="btn btn-primary" onclick="addNewChallenge()">حفظ</button></div>
@@ -1014,18 +1608,10 @@
             <div class="form-group" style="display:flex; gap:10px;">
                 <div style="flex:1;"><label>الأسبوع</label><input type="number" id="edit-challenge-week" class="form-input"></div>
                 <div style="flex:1;"><label>الشهر</label><select id="edit-challenge-month" class="form-select">
-                    <option value="1">يناير</option>
-                    <option value="2">فبراير</option>
-                    <option value="3">مارس</option>
-                    <option value="4">أبريل</option>
-                    <option value="5">مايو</option>
-                    <option value="6">يونيو</option>
-                    <option value="7">يوليو</option>
-                    <option value="8">أغسطس</option>
-                    <option value="9">سبتمبر</option>
-                    <option value="10">أكتوبر</option>
-                    <option value="11">نوفمبر</option>
-                    <option value="12">ديسمبر</option>
+                    <option value="1">يناير</option><option value="2">فبراير</option><option value="3">مارس</option>
+                    <option value="4">أبريل</option><option value="5">مايو</option><option value="6">يونيو</option>
+                    <option value="7">يوليو</option><option value="8">أغسطس</option><option value="9">سبتمبر</option>
+                    <option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
                 </select></div>
             </div>
             <div class="form-group"><label>نقاط XP</label><input type="number" id="edit-challenge-xp" class="form-input"></div>
@@ -1040,7 +1626,7 @@
     <!-- ================= FIREBASE INTEGRATION ===================== -->
     <!-- ============================================================ -->
     <script type="module">
-        // استيراد Firebase SDK
+        // استيراد Firebase SDK - App + Firestore + Auth
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { 
             getFirestore, 
@@ -1050,8 +1636,16 @@
             onSnapshot,
             deleteDoc
         } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged,
+            updateProfile
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-        // إعدادات مشروع Masar الخاصة بك
+        // إعدادات مشروع Masar
         const firebaseConfig = {
             apiKey: "AIzaSyAQYqdswJk5yaZb85QtPISs-xOMeY_Fv-4",
             authDomain: "masar-6f5d7.firebaseapp.com",
@@ -1065,11 +1659,12 @@
         // تهيئة Firebase
         const firebaseApp = initializeApp(firebaseConfig);
         const db = getFirestore(firebaseApp);
+        const auth = getAuth(firebaseApp);
         
         // مرجع وثيقة البيانات الرئيسية
         const dataDocRef = doc(db, "platform", "main");
 
-        // إتاحة الدوال للنطاق العام (window) عشان تقدر تستخدمها باقي السكربتات
+        // إتاحة الدوال للنطاق العام (window)
         window.firebaseDB = {
             // حفظ البيانات في Firestore
             async save(data) {
@@ -1085,7 +1680,7 @@
                 }
             },
 
-            // تحميل البيانات من Firestore مرة واحدة
+            // تحميل البيانات من Firestore
             async load() {
                 try {
                     const snapshot = await getDoc(dataDocRef);
@@ -1099,7 +1694,7 @@
                 }
             },
 
-            // الاستماع للتغييرات اللحظية (real-time)
+            // الاستماع للتغييرات اللحظية
             listen(callback) {
                 return onSnapshot(dataDocRef, 
                     (snapshot) => {
@@ -1127,6 +1722,68 @@
             }
         };
 
+        // Firebase Auth API
+        window.firebaseAuth = {
+            // تسجيل دخول الطالب
+            async signIn(email, password) {
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    return { success: true, user: userCredential.user };
+                } catch (error) {
+                    console.error("فشل الدخول:", error);
+                    let msg = "بيانات الدخول غير صحيحة";
+                    if (error.code === 'auth/invalid-email') msg = "صيغة البريد غير صحيحة";
+                    else if (error.code === 'auth/user-not-found') msg = "لا يوجد حساب بهذا البريد";
+                    else if (error.code === 'auth/wrong-password') msg = "كلمة المرور غير صحيحة";
+                    else if (error.code === 'auth/invalid-credential') msg = "بيانات الدخول غير صحيحة";
+                    else if (error.code === 'auth/too-many-requests') msg = "محاولات كثيرة. حاول لاحقاً";
+                    else if (error.code === 'auth/network-request-failed') msg = "فشل الاتصال بالشبكة";
+                    return { success: false, error: msg };
+                }
+            },
+
+            // إنشاء حساب طالب (يستدعيه المشرف)
+            async createAccount(email, password, displayName) {
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    if (displayName) {
+                        try {
+                            await updateProfile(userCredential.user, { displayName });
+                        } catch(e) { console.warn("تعذر تحديث الاسم:", e); }
+                    }
+                    return { success: true, user: userCredential.user };
+                } catch (error) {
+                    console.error("فشل إنشاء الحساب:", error);
+                    let msg = "فشل إنشاء الحساب";
+                    if (error.code === 'auth/email-already-in-use') msg = "البريد مستخدم من قبل";
+                    else if (error.code === 'auth/invalid-email') msg = "صيغة البريد غير صحيحة";
+                    else if (error.code === 'auth/weak-password') msg = "كلمة المرور ضعيفة (6 أحرف على الأقل)";
+                    else if (error.code === 'auth/network-request-failed') msg = "فشل الاتصال بالشبكة";
+                    return { success: false, error: msg };
+                }
+            },
+
+            // تسجيل خروج
+            async signOut() {
+                try {
+                    await signOut(auth);
+                    return true;
+                } catch (error) {
+                    console.error("فشل الخروج:", error);
+                    return false;
+                }
+            },
+
+            // متابعة حالة المصادقة
+            onStateChange(callback) {
+                return onAuthStateChanged(auth, callback);
+            },
+
+            getCurrentUser() {
+                return auth.currentUser;
+            }
+        };
+
         // إشعار الواجهة أن Firebase جاهز
         window.dispatchEvent(new Event('firebase-ready'));
     </script>
@@ -1144,6 +1801,12 @@
             tracks: ["برمجة", "تصميم", "تسويق", "إدارة أعمال"],
             members: [],
             challenges: [],
+            xpRules: [
+                { id: 1, name: "إنجاز مهمة", points: 10 },
+                { id: 2, name: "مهمة إضافية", points: 20 },
+                { id: 3, name: "مساعدة زميل", points: 15 },
+                { id: 4, name: "مشاركة تعليمية", points: 5 }
+            ],
             settings: {
                 defaultXP: 50
             }
@@ -1153,6 +1816,9 @@
         let isFirebaseReady = false;
         let isInitialLoad = true;
         let unsubscribeListener = null;
+        let currentStudentMemberId = null; // العضو الذي سجل دخوله كطالب
+        let currentLoginTab = 'admin'; // admin أو student
+        let studentChart = null; // Chart.js instance
 
         // ============ localStorage بسيط للجلسة فقط ============
         const sessionStorage_safe = {
@@ -1172,6 +1838,7 @@
                 tracks: state.tracks,
                 members: state.members,
                 challenges: state.challenges,
+                xpRules: state.xpRules,
                 settings: state.settings
             };
             
@@ -1189,10 +1856,15 @@
             
             const success = await window.firebaseDB.reset();
             if (success) {
-                // إعادة ضبط الحالة للافتراضية
                 state.tracks = ["برمجة", "تصميم", "تسويق", "إدارة أعمال"];
                 state.members = [];
                 state.challenges = [];
+                state.xpRules = [
+                    { id: 1, name: "إنجاز مهمة", points: 10 },
+                    { id: 2, name: "مهمة إضافية", points: 20 },
+                    { id: 3, name: "مساعدة زميل", points: 15 },
+                    { id: 4, name: "مشاركة تعليمية", points: 5 }
+                ];
                 state.settings = { defaultXP: 50 };
                 
                 await saveData();
@@ -1209,28 +1881,24 @@
             
             unsubscribeListener = window.firebaseDB.listen((data) => {
                 if (data) {
-                    // تحديث الحالة من السحابة
                     if (data.tracks && data.tracks.length > 0) state.tracks = data.tracks;
                     if (data.members) state.members = data.members;
                     if (data.challenges) state.challenges = data.challenges;
+                    if (data.xpRules && Array.isArray(data.xpRules)) state.xpRules = data.xpRules;
                     if (data.settings) state.settings = data.settings;
                     
-                    // تحديث قيم الـ DOM
                     const defaultXpEl = document.getElementById('default-xp');
                     if (defaultXpEl && state.settings.defaultXP) {
                         defaultXpEl.value = state.settings.defaultXP;
                     }
                     
-                    // إعادة رسم الواجهة بدون حفظ
                     refreshUIOnly();
                     
-                    // في أول تحميل، أخفي شاشة التحميل
                     if (isInitialLoad) {
                         hideLoader();
                         isInitialLoad = false;
                     }
                 } else {
-                    // لو ما فيه بيانات في السحابة، احفظ الحالة الافتراضية
                     if (isInitialLoad) {
                         saveData();
                         hideLoader();
@@ -1242,14 +1910,12 @@
             });
         }
 
-        // ============ مؤشرات حالة الاتصال والحفظ ============
+        // ============ مؤشرات ============
         function showSaveIndicator() {
             const indicator = document.getElementById('save-indicator');
             if(!indicator) return;
             indicator.classList.add('show');
-            setTimeout(() => {
-                indicator.classList.remove('show');
-            }, 1500);
+            setTimeout(() => { indicator.classList.remove('show'); }, 1500);
         }
 
         function updateConnectionStatus(connected) {
@@ -1258,18 +1924,13 @@
             if (!el) return;
             el.style.display = 'flex';
             if (connected) {
-                el.classList.remove('disconnected');
-                el.classList.add('connected');
+                el.classList.remove('disconnected'); el.classList.add('connected');
                 if (text) text.textContent = 'متصل بالسحابة';
             } else {
-                el.classList.remove('connected');
-                el.classList.add('disconnected');
+                el.classList.remove('connected'); el.classList.add('disconnected');
                 if (text) text.textContent = 'غير متصل';
             }
-            // إخفاء المؤشر بعد 3 ثواني إذا كان متصل
-            if (connected) {
-                setTimeout(() => { el.style.display = 'none'; }, 3000);
-            }
+            if (connected) setTimeout(() => { el.style.display = 'none'; }, 3000);
         }
 
         function hideLoader() {
@@ -1278,15 +1939,25 @@
         }
 
         // ============ نظام الدخول ============
+        function switchLoginTab(tab) {
+            currentLoginTab = tab;
+            document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
+            document.getElementById('tab-student').classList.toggle('active', tab === 'student');
+            document.getElementById('admin-login-form').style.display = tab === 'admin' ? 'block' : 'none';
+            document.getElementById('student-login-form').style.display = tab === 'student' ? 'block' : 'none';
+        }
+
         function showLoginView() {
             document.getElementById('guest-view').classList.remove('active');
             document.getElementById('admin-layout').style.display = 'none';
+            document.getElementById('student-layout').classList.remove('active');
             document.getElementById('login-view').classList.add('active');
         }
 
         function showGuestView() {
             document.getElementById('login-view').classList.remove('active');
             document.getElementById('admin-layout').style.display = 'none';
+            document.getElementById('student-layout').classList.remove('active');
             document.getElementById('guest-view').classList.add('active');
             refreshGuestView();
         }
@@ -1294,9 +1965,19 @@
         function showAdminView() {
             document.getElementById('login-view').classList.remove('active');
             document.getElementById('guest-view').classList.remove('active');
+            document.getElementById('student-layout').classList.remove('active');
             document.getElementById('admin-layout').style.display = 'flex';
             refreshUI();
             navigate('dashboard');
+        }
+
+        function showStudentView() {
+            document.getElementById('login-view').classList.remove('active');
+            document.getElementById('guest-view').classList.remove('active');
+            document.getElementById('admin-layout').style.display = 'none';
+            document.getElementById('student-layout').classList.add('active');
+            refreshStudentView();
+            showStudentSection('tasks');
         }
 
         function attemptLogin() {
@@ -1326,17 +2007,103 @@
             }
         }
 
-        function logout() {
-            if(confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                sessionStorage_safe.removeItem("isLoggedIn");
-                sessionStorage_safe.removeItem("userRole");
-                showGuestView();
-                showToast('تم تسجيل الخروج', 'info');
+        // ============ تسجيل دخول الطالب عبر Firebase Auth ============
+        async function attemptStudentLogin() {
+            const emailField = document.getElementById('student-email');
+            const passField = document.getElementById('student-password');
+            const btn = document.getElementById('student-login-btn');
+            const card = document.getElementById('login-card');
+
+            const email = (emailField.value || '').trim();
+            const password = (passField.value || '').trim();
+
+            if (!email || !password) {
+                showToast('الرجاء إدخال البريد وكلمة المرور', 'danger');
+                return;
             }
+
+            if (!window.firebaseAuth) {
+                showToast('Firebase غير جاهز، حاول مجدداً', 'danger');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الدخول...';
+
+            const result = await window.firebaseAuth.signIn(email, password);
+
+            btn.disabled = false;
+            btn.innerHTML = 'دخول الطالب';
+
+            if (result.success) {
+                // ابحث عن الطالب في state.members عبر البريد
+                const member = state.members.find(m => m.email && m.email.toLowerCase() === email.toLowerCase());
+                if (!member) {
+                    showToast('تم الدخول لكن لا يوجد ملف طالب مرتبط. تواصل مع المشرف', 'danger');
+                    await window.firebaseAuth.signOut();
+                    return;
+                }
+
+                sessionStorage_safe.setItem("isLoggedIn", "true");
+                sessionStorage_safe.setItem("userRole", "student");
+                sessionStorage_safe.setItem("studentMemberId", String(member.id));
+                currentStudentMemberId = member.id;
+
+                emailField.value = '';
+                passField.value = '';
+                showStudentView();
+                showToast('أهلاً بك ' + member.name + ' 👋', 'success');
+            } else {
+                card.classList.add('shake');
+                showToast(result.error || 'فشل الدخول', 'danger');
+                setTimeout(() => { card.classList.remove('shake'); }, 500);
+            }
+        }
+
+        async function logout() {
+            if(!confirm('هل أنت متأكد من تسجيل الخروج؟')) return;
+            
+            const role = sessionStorage_safe.getItem("userRole");
+            if (role === 'student' && window.firebaseAuth) {
+                await window.firebaseAuth.signOut();
+            }
+            
+            sessionStorage_safe.removeItem("isLoggedIn");
+            sessionStorage_safe.removeItem("userRole");
+            sessionStorage_safe.removeItem("studentMemberId");
+            currentStudentMemberId = null;
+            
+            showGuestView();
+            showToast('تم تسجيل الخروج', 'info');
         }
 
         function isLoggedIn() {
             return sessionStorage_safe.getItem("isLoggedIn") === "true";
+        }
+
+        function getCurrentRole() {
+            return sessionStorage_safe.getItem("userRole");
+        }
+
+        // ============ Dark Mode ============
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            sessionStorage_safe.setItem('darkMode', isDark ? 'true' : 'false');
+            updateThemeIcons(isDark);
+        }
+
+        function updateThemeIcons(isDark) {
+            const iconClass = isDark ? 'fa-sun' : 'fa-moon';
+            ['theme-icon-admin', 'theme-icon-student', 'theme-icon-guest', 'theme-icon-profile'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.className = 'fas ' + iconClass;
+            });
+        }
+
+        function initDarkMode() {
+            const isDark = sessionStorage_safe.getItem('darkMode') === 'true';
+            if (isDark) document.body.classList.add('dark-mode');
+            updateThemeIcons(isDark);
         }
 
         // ============ View Mode Switcher ============
@@ -1355,24 +2122,19 @@
         }
 
         function updateModeButtons(activeMode) {
-            const btnMobile = document.getElementById('btn-mobile');
-            const btnDesktop = document.getElementById('btn-desktop');
-            if(btnMobile) btnMobile.classList.toggle('active', activeMode === 'mobile');
-            if(btnDesktop) btnDesktop.classList.toggle('active', activeMode === 'desktop');
-            
-            const guestMobile = document.getElementById('guest-btn-mobile');
-            const guestDesktop = document.getElementById('guest-btn-desktop');
-            if(guestMobile) guestMobile.classList.toggle('active', activeMode === 'mobile');
-            if(guestDesktop) guestDesktop.classList.toggle('active', activeMode === 'desktop');
+            ['btn-mobile', 'guest-btn-mobile', 'student-btn-mobile'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('active', activeMode === 'mobile');
+            });
+            ['btn-desktop', 'guest-btn-desktop', 'student-btn-desktop'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('active', activeMode === 'desktop');
+            });
         }
 
         function initViewMode() {
             const mode = sessionStorage_safe.getItem("viewMode") || "mobile";
-            if (mode === "desktop") {
-                setDesktopMode();
-            } else {
-                setMobileMode();
-            }
+            if (mode === "desktop") setDesktopMode(); else setMobileMode();
         }
 
         // ============ Navigation & Routing ============
@@ -1395,9 +2157,9 @@
         }
 
         function showSection(sectionId) {
-            const adminPages = ['dashboard', 'members', 'challenges', 'reports', 'explorers', 'settings', 'member-details'];
+            const adminPages = ['dashboard', 'members', 'challenges', 'reports', 'explorers', 'xp-rules', 'settings', 'member-details'];
             if (adminPages.includes(sectionId)) {
-                if (!isLoggedIn()) {
+                if (!isLoggedIn() || getCurrentRole() !== 'admin') {
                     showLoginView();
                     return;
                 }
@@ -1406,7 +2168,10 @@
             document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
             const targetSection = document.getElementById(sectionId);
             if (targetSection) targetSection.classList.add('active');
-            else document.getElementById('dashboard').classList.add('active');
+            else {
+                const d = document.getElementById('dashboard');
+                if (d) d.classList.add('active');
+            }
             
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.classList.remove('active');
@@ -1418,44 +2183,52 @@
             else body.classList.remove('home-view');
 
             const isMobileMode = body.classList.contains('mobile-mode');
-            if(window.innerWidth <= 768 || isMobileMode) {
-                closeSidebar();
-            }
+            if(window.innerWidth <= 768 || isMobileMode) closeSidebar();
             
             if(sectionId === 'explorers') renderExplorers();
             if(sectionId === 'reports') renderReportChart();
+            if(sectionId === 'xp-rules') renderXpRulesList();
+        }
+
+        // ============ Student Navigation ============
+        function showStudentSection(sectionId) {
+            document.querySelectorAll('.student-section').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById('student-section-' + sectionId);
+            if (target) target.classList.add('active');
+            document.querySelectorAll('.student-nav-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-st-target') === sectionId);
+            });
+
+            if (sectionId === 'progress') renderStudentProgressChart();
+            if (sectionId === 'leaderboard') renderStudentLeaderboard();
+            if (sectionId === 'profile') loadStudentProfile();
         }
 
         // ============ DOM Ready ============
         document.addEventListener('DOMContentLoaded', () => {
             initBackgroundAnimation();
             initViewMode();
+            initDarkMode();
             populateTracksDropdowns();
 
-            // دعم الضغط على Enter في حقول تسجيل الدخول
             const usernameField = document.getElementById('username');
             const passwordField = document.getElementById('password');
-            if(usernameField) {
-                usernameField.addEventListener('keypress', (e) => {
-                    if(e.key === 'Enter') attemptLogin();
-                });
-            }
-            if(passwordField) {
-                passwordField.addEventListener('keypress', (e) => {
-                    if(e.key === 'Enter') attemptLogin();
-                });
-            }
+            const studentEmailField = document.getElementById('student-email');
+            const studentPassField = document.getElementById('student-password');
+            
+            if(usernameField) usernameField.addEventListener('keypress', (e) => { if(e.key === 'Enter') attemptLogin(); });
+            if(passwordField) passwordField.addEventListener('keypress', (e) => { if(e.key === 'Enter') attemptLogin(); });
+            if(studentEmailField) studentEmailField.addEventListener('keypress', (e) => { if(e.key === 'Enter') attemptStudentLogin(); });
+            if(studentPassField) studentPassField.addEventListener('keypress', (e) => { if(e.key === 'Enter') attemptStudentLogin(); });
         });
 
-        // عند جاهزية Firebase، ابدأ التحميل
+        // عند جاهزية Firebase
         window.addEventListener('firebase-ready', async () => {
             isFirebaseReady = true;
-            console.log("✅ Firebase جاهز");
+            console.log("✅ Firebase جاهز (DB + Auth)");
             
-            // بدء الاستماع اللحظي
             startListening();
             
-            // بعد 5 ثواني، إذا ما وصلت بيانات، أخفي شاشة التحميل
             setTimeout(() => {
                 if (isInitialLoad) {
                     hideLoader();
@@ -1463,45 +2236,55 @@
                     updateConnectionStatus(false);
                     showToast('تعذر الاتصال بقاعدة البيانات', 'danger');
                     
-                    // عرض الواجهة الافتراضية
-                    if (isLoggedIn()) {
-                        showAdminView();
-                        handleRouteChange();
-                    } else {
-                        showGuestView();
-                    }
+                    handleInitialLoad();
                 }
             }, 5000);
         });
 
-        // عند وصول البيانات لأول مرة
         function handleInitialLoad() {
+            const role = getCurrentRole();
             if (isLoggedIn()) {
-                showAdminView();
-                handleRouteChange();
+                if (role === 'admin') {
+                    showAdminView();
+                    handleRouteChange();
+                } else if (role === 'student') {
+                    const savedId = parseInt(sessionStorage_safe.getItem('studentMemberId'));
+                    if (savedId && state.members.find(m => m.id === savedId)) {
+                        currentStudentMemberId = savedId;
+                        showStudentView();
+                    } else {
+                        // البيانات لم تصل بعد أو الطالب حذف
+                        showGuestView();
+                    }
+                } else {
+                    showGuestView();
+                }
             } else {
                 showGuestView();
             }
         }
 
-        // تعديل refreshUIOnly عشان يراعي أول تحميل
         function refreshUIOnly() {
             renderDashboard();
             renderMembersTable();
             renderChallengesTable();
             populateMemberDropdowns();
             populateTracksDropdowns();
+            populateChallengeRuleDropdown();
             renderExplorers();
+            renderXpRulesList();
             refreshGuestView();
+            refreshStudentView();
             
-            // عند أول تحميل، اعرض الواجهة المناسبة
             const adminLayout = document.getElementById('admin-layout');
             const guestView = document.getElementById('guest-view');
             const loginView = document.getElementById('login-view');
+            const studentLayout = document.getElementById('student-layout');
             
             const anyVisible = adminLayout.style.display === 'flex' 
                 || guestView.classList.contains('active') 
-                || loginView.classList.contains('active');
+                || loginView.classList.contains('active')
+                || studentLayout.classList.contains('active');
             
             if (!anyVisible) {
                 handleInitialLoad();
@@ -1514,9 +2297,12 @@
             renderChallengesTable();
             populateMemberDropdowns();
             populateTracksDropdowns();
+            populateChallengeRuleDropdown();
             renderExplorers();
+            renderXpRulesList();
             refreshGuestView();
-            saveData(); // حفظ في Firebase
+            refreshStudentView();
+            saveData();
         }
 
         function toggleSidebar() { 
@@ -1581,9 +2367,9 @@
             }, 3000);
         }
 
-        // ============ Guest View ============
+        // ============ Guest View + Public Search ============
         function refreshGuestView() {
-            const sortedMembers = [...state.members].sort((a, b) => b.xp - a.xp).slice(0, 5);
+            const sortedMembers = [...state.members].sort((a, b) => b.xp - a.xp).slice(0, 10);
             const guestLb = document.getElementById('guest-leaderboard');
             if(guestLb) {
                 if (sortedMembers.length === 0) {
@@ -1634,6 +2420,54 @@
             }
         }
 
+        function runPublicSearch() {
+            const input = document.getElementById('public-search-input');
+            const resultsBox = document.getElementById('public-search-results');
+            if (!input || !resultsBox) return;
+            const q = (input.value || '').trim().toLowerCase();
+            
+            if (!q) {
+                resultsBox.style.display = 'none';
+                resultsBox.innerHTML = '';
+                return;
+            }
+            
+            const matches = state.members.filter(m => 
+                (m.name || '').toLowerCase().includes(q) ||
+                (m.track || '').toLowerCase().includes(q)
+            ).slice(0, 8);
+            
+            if (matches.length === 0) {
+                resultsBox.style.display = 'block';
+                resultsBox.innerHTML = '<div style="padding:1.5rem; text-align:center; color:var(--text-grey);">لا توجد نتائج مطابقة</div>';
+                return;
+            }
+            
+            resultsBox.style.display = 'block';
+            resultsBox.innerHTML = '<div style="padding:10px 16px; font-size:0.85rem; color:var(--text-grey); background:var(--bg-color); border-bottom:1px solid var(--border-color);">نتائج البحث: ' + matches.length + '</div>' +
+                matches.map(m => {
+                    const progress = getMemberProgress(m.id);
+                    const status = getMemberStatus(m);
+                    return `
+                    <div class="lb-item">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <img src="https://picsum.photos/seed/${m.avatar}/40/40" style="border-radius:50%; width:40px; height:40px;">
+                            <div>
+                                <div style="font-weight:700;">${m.name}</div>
+                                <div style="font-size:0.8rem; color:var(--text-grey);">
+                                    <i class="fas fa-compass"></i> ${m.track} · <span class="status-badge ${status.class}" style="font-size:0.7rem;">${status.label}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align:left;">
+                            <div class="xp-tag"><i class="fas fa-coins"></i> ${m.xp} XP</div>
+                            <div style="font-size:0.75rem; color:var(--text-grey); margin-top:4px;">التقدم ${progress}%</div>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+        }
+
         // ============ Admin Render Functions ============
         function renderDashboard() {
             const elMembers = document.getElementById('stat-members-count');
@@ -1653,7 +2487,7 @@
             if(avgXP < 50) activity = "منخفض";
             elActivity.innerText = activity;
             
-            const sortedMembers = [...state.members].sort((a, b) => b.xp - a.xp).slice(0, 5);
+            const sortedMembers = [...state.members].sort((a, b) => b.xp - a.xp).slice(0, 10);
             const lb = document.getElementById('dashboard-leaderboard');
             if(lb) {
                 if (sortedMembers.length === 0) {
@@ -1677,7 +2511,7 @@
             const tbody = document.getElementById('members-table-body');
             if(!tbody) return;
             if (state.members.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-grey);">لا يوجد أعضاء - اضغط "إضافة عضو" للبدء</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-grey);">لا يوجد أعضاء - اضغط "إضافة عضو" للبدء</td></tr>';
                 return;
             }
             tbody.innerHTML = state.members.map(m => {
@@ -1690,6 +2524,7 @@
                             <strong>${m.name}</strong>
                         </div>
                     </td>
+                    <td data-label="البريد"><small style="color:var(--text-grey);">${m.email || '--'}</small></td>
                     <td data-label="المجال">${m.track}</td>
                     <td data-label="نقاط XP"><span class="xp-tag">${m.xp} XP</span></td>
                     <td data-label="الحالة"><span class="status-badge ${status.class}">${status.label}</span></td>
@@ -1712,23 +2547,37 @@
             }
             tbody.innerHTML = state.challenges.map(c => {
                 const member = state.members.find(m => m.id === c.memberId);
-                const statusText = c.completed ? 'منجز' : 'لم ينجز'; 
-                const statusClass = c.completed ? 'status-success' : 'status-danger';
+                let statusText, statusClass;
+                if (c.completed) { statusText = 'منجز'; statusClass = 'status-success'; }
+                else if (c.status === 'not_done') { statusText = 'لم ينجز'; statusClass = 'status-danger'; }
+                else { statusText = 'قيد التنفيذ'; statusClass = 'status-info'; }
+                
+                const reasonInfo = (c.status === 'not_done' && c.reason) 
+                    ? `<div class="admin-task-reason-view"><strong>السبب:</strong> ${c.reason}${c.solution ? '<br><strong>الحل المقترح:</strong> ' + c.solution : ''}</div>` 
+                    : '';
+                
                 return `
                 <tr>
                     <td data-label="العضو">${member ? member.name : 'غير معروف'}</td>
-                    <td data-label="التحدي"><strong>${c.title}</strong></td>
+                    <td data-label="التحدي"><strong>${c.title}</strong>${reasonInfo}</td>
                     <td data-label="الأسبوع">أسبوع ${c.week}</td>
                     <td data-label="نقاط XP">${c.xp}</td>
                     <td data-label="الحالة">
-                        <span class="status-badge ${statusClass}">${statusText}</span>
+                        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                            <button class="btn-icon" style="background:${c.completed ? '#dcfce7' : 'transparent'}; color:${c.completed ? '#166534' : 'var(--text-grey)'};" 
+                                onclick="setChallengeStatus(${c.id}, 'done')" title="منجز">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn-icon" style="background:${c.status === 'not_done' ? '#fee2e2' : 'transparent'}; color:${c.status === 'not_done' ? '#991b1b' : 'var(--text-grey)'};" 
+                                onclick="setChallengeStatus(${c.id}, 'not_done')" title="لم ينجز">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </td>
-                    <td data-label="إنجاز">
-                        <input type="checkbox" ${c.completed ? 'checked' : ''} 
-                        onchange="toggleChallengeComplete(${c.id})" style="transform:scale(1.5); cursor:pointer;">
-                    </td>
+                    <td data-label="الحالة النصية"><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td data-label="تعديل">
                         <button class="btn-icon edit" onclick="openEditChallengeModal(${c.id})" title="تعديل"><i class="fas fa-pen"></i></button>
+                        <button class="btn-icon delete" onclick="deleteChallenge(${c.id})" title="حذف"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
                 `;
@@ -1880,10 +2729,7 @@
                 if (!container) return;
                 const inputs = container.querySelectorAll('.track-input');
                 const lastInput = inputs[inputs.length - 1];
-                if(lastInput) {
-                    lastInput.classList.remove('saved');
-                    lastInput.focus();
-                }
+                if(lastInput) { lastInput.classList.remove('saved'); lastInput.focus(); }
             }, 50);
         }
         
@@ -1893,17 +2739,9 @@
             const input = container.querySelector(`.track-input[data-index="${index}"]`);
             if(!input) return;
             const newValue = input.value.trim();
-            if(!newValue) {
-                showToast('لا يمكن ترك المسار فارغاً', 'danger');
-                input.focus();
-                return;
-            }
+            if(!newValue) { showToast('لا يمكن ترك المسار فارغاً', 'danger'); input.focus(); return; }
             const isDuplicate = state.tracks.some((t, i) => i !== index && t === newValue);
-            if(isDuplicate) {
-                showToast('هذا المسار موجود مسبقاً', 'danger');
-                input.focus();
-                return;
-            }
+            if(isDuplicate) { showToast('هذا المسار موجود مسبقاً', 'danger'); input.focus(); return; }
             state.tracks[index] = newValue;
             input.classList.add('saved');
             populateTracksDropdowns();
@@ -1913,21 +2751,13 @@
         
         function deleteTrack(index) {
             const trackName = state.tracks[index];
-            if(!trackName) {
-                state.tracks.splice(index, 1);
-                renderTracksList();
-                return;
-            }
+            if(!trackName) { state.tracks.splice(index, 1); renderTracksList(); return; }
             const usedByMembers = state.members.filter(m => m.track === trackName);
             let confirmMsg = `هل أنت متأكد من حذف المسار "${trackName}"؟`;
-            if(usedByMembers.length > 0) {
-                confirmMsg += `\n\nتنبيه: يوجد ${usedByMembers.length} عضو يستخدم هذا المسار حالياً.`;
-            }
+            if(usedByMembers.length > 0) confirmMsg += `\n\nتنبيه: يوجد ${usedByMembers.length} عضو يستخدم هذا المسار حالياً.`;
             if(confirm(confirmMsg)) {
                 state.tracks.splice(index, 1);
-                if(state.tracks.length === 0) {
-                    state.tracks.push('عام');
-                }
+                if(state.tracks.length === 0) state.tracks.push('عام');
                 populateTracksDropdowns();
                 saveData();
                 showToast('تم حذف المسار', 'danger');
@@ -1943,21 +2773,92 @@
                     const val = input.value.trim();
                     if(val && !newTracks.includes(val)) newTracks.push(val);
                 });
-                if(newTracks.length === 0) {
-                    showToast('يجب إضافة مسار واحد على الأقل', 'danger');
-                    return;
-                }
+                if(newTracks.length === 0) { showToast('يجب إضافة مسار واحد على الأقل', 'danger'); return; }
                 state.tracks = newTracks;
             }
             
             const defaultXpEl = document.getElementById('default-xp');
-            if (defaultXpEl) {
-                state.settings.defaultXP = parseInt(defaultXpEl.value) || 50;
-            }
+            if (defaultXpEl) state.settings.defaultXP = parseInt(defaultXpEl.value) || 50;
             
             populateTracksDropdowns(); 
             saveData();
             showToast('تم حفظ جميع التعديلات بنجاح');
+        }
+
+        // ============ XP Rules Management ============
+        function renderXpRulesList() {
+            const container = document.getElementById('xp-rules-list');
+            if (!container) return;
+            if (!state.xpRules || state.xpRules.length === 0) {
+                container.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-grey); background:#f9fafb; border-radius:8px;">لا توجد قواعد - اضغط "إضافة قاعدة"</div>';
+                return;
+            }
+            container.innerHTML = state.xpRules.map((rule, idx) => `
+                <div class="xp-rules-grid">
+                    <input type="text" value="${rule.name || ''}" data-rule-index="${idx}" data-field="name" placeholder="اسم النشاط">
+                    <div style="display:flex; gap:6px;">
+                        <input type="number" value="${rule.points || 0}" data-rule-index="${idx}" data-field="points" placeholder="XP" style="text-align:center;">
+                        <button class="btn-track btn-track-delete" onclick="deleteXpRule(${idx})" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addXpRule() {
+            const newId = state.xpRules.length > 0 ? Math.max(...state.xpRules.map(r => r.id || 0)) + 1 : 1;
+            state.xpRules.push({ id: newId, name: '', points: 10 });
+            renderXpRulesList();
+        }
+
+        function deleteXpRule(index) {
+            if (!confirm('حذف هذه القاعدة؟')) return;
+            state.xpRules.splice(index, 1);
+            renderXpRulesList();
+            saveData();
+            populateChallengeRuleDropdown();
+            showToast('تم حذف القاعدة', 'info');
+        }
+
+        function saveXpRules() {
+            const container = document.getElementById('xp-rules-list');
+            if (!container) return;
+            const nameInputs = container.querySelectorAll('input[data-field="name"]');
+            const pointsInputs = container.querySelectorAll('input[data-field="points"]');
+            const newRules = [];
+            nameInputs.forEach((nameInput, idx) => {
+                const name = (nameInput.value || '').trim();
+                const points = parseInt(pointsInputs[idx]?.value) || 0;
+                if (name) {
+                    newRules.push({ 
+                        id: state.xpRules[idx]?.id || (idx + 1), 
+                        name, 
+                        points 
+                    });
+                }
+            });
+            state.xpRules = newRules;
+            saveData();
+            populateChallengeRuleDropdown();
+            showToast('تم حفظ قواعد النقاط');
+        }
+
+        function populateChallengeRuleDropdown() {
+            const sel = document.getElementById('challenge-rule');
+            if (!sel) return;
+            const custom = '<option value="custom">مخصص (اكتب النقاط يدوياً)</option>';
+            const options = state.xpRules.map(r => 
+                `<option value="${r.points}">${r.name} (${r.points} XP)</option>`
+            ).join('');
+            sel.innerHTML = custom + options;
+        }
+
+        function applyXpRuleToChallenge() {
+            const sel = document.getElementById('challenge-rule');
+            const xpInput = document.getElementById('challenge-xp');
+            if (!sel || !xpInput) return;
+            if (sel.value !== 'custom') {
+                xpInput.value = sel.value;
+            }
         }
 
         // ============ Member Actions ============
@@ -1969,16 +2870,67 @@
             if(challengeSel) challengeSel.innerHTML = options || '<option>لا يوجد أعضاء</option>';
         }
 
-        function addNewMember() {
+        async function addNewMember() {
             const name = document.getElementById('new-member-name').value.trim();
+            const email = document.getElementById('new-member-email').value.trim();
+            const password = document.getElementById('new-member-password').value.trim();
             const track = document.getElementById('new-member-track').value;
+            const btn = document.getElementById('add-member-btn');
+            
             if(!name) { showToast('الرجاء إدخال الاسم', 'danger'); return; }
+            if(!email) { showToast('الرجاء إدخال البريد الإلكتروني', 'danger'); return; }
+            if(!password || password.length < 6) { showToast('كلمة المرور 6 أحرف على الأقل', 'danger'); return; }
+            
+            // تحقق ما إذا كان البريد مستخدم في state
+            if (state.members.some(m => m.email && m.email.toLowerCase() === email.toLowerCase())) {
+                showToast('هذا البريد مسجل مسبقاً', 'danger');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإنشاء...';
+            
+            // ملاحظة: إنشاء مستخدم جديد في Firebase Auth سيقوم بتسجيل دخوله تلقائياً
+            // ولهذا نحتفظ بجلسة المشرف حتى لا تضيع
+            let authCreated = false;
+            if (window.firebaseAuth) {
+                // ملاحظة مهمة: createUserWithEmailAndPassword يُسجل دخول المستخدم الجديد تلقائياً
+                // لكن بما أن تسجيل دخول المشرف عندنا لا يستخدم Firebase Auth (إنما ثابت MASAR/mAsAr2026)
+                // فلا مشكلة. المشرف يبقى مسجل دخول عبر sessionStorage.
+                const result = await window.firebaseAuth.createAccount(email, password, name);
+                if (!result.success) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'حفظ';
+                    showToast(result.error, 'danger');
+                    return;
+                }
+                authCreated = true;
+                // اخرج من حساب الطالب الذي تم إنشاؤه تلقائياً حتى لا نظهر في student-layout
+                await window.firebaseAuth.signOut();
+            }
+            
             const newId = state.members.length > 0 ? Math.max(...state.members.map(m => m.id)) + 1 : 1;
-            state.members.push({ id: newId, name: name, track: track, xp: 0, avatar: Math.floor(Math.random() * 100) });
+            state.members.push({ 
+                id: newId, 
+                name: name, 
+                email: email,
+                track: track, 
+                xp: 0, 
+                avatar: Math.floor(Math.random() * 1000),
+                bio: '',
+                createdAt: new Date().toISOString()
+            });
+            
+            btn.disabled = false;
+            btn.innerHTML = 'حفظ';
             closeModal('addMemberModal'); 
             refreshUI(); 
-            showToast('تم إضافة العضو بنجاح'); 
+            showToast(authCreated ? 'تم إنشاء الحساب وإضافة العضو ✅' : 'تم إضافة العضو'); 
+            
+            // تفريغ الحقول
             document.getElementById('new-member-name').value = '';
+            document.getElementById('new-member-email').value = '';
+            document.getElementById('new-member-password').value = '';
         }
 
         function openEditMemberModal(id) {
@@ -1986,24 +2938,34 @@
             if(!member) return;
             document.getElementById('edit-member-id').value = member.id;
             document.getElementById('edit-member-name').value = member.name;
+            document.getElementById('edit-member-email').value = member.email || '';
             document.getElementById('edit-member-track').value = member.track;
+            document.getElementById('edit-member-xp').value = member.xp;
             openModal('editMemberModal');
         }
 
         function saveMemberEdit() {
             const id = parseInt(document.getElementById('edit-member-id').value);
+            const newName = document.getElementById('edit-member-name').value.trim();
             const newTrack = document.getElementById('edit-member-track').value;
+            const newXp = parseInt(document.getElementById('edit-member-xp').value) || 0;
             const memberIndex = state.members.findIndex(m => m.id === id);
             if(memberIndex !== -1) {
+                if (newName) state.members[memberIndex].name = newName;
                 state.members[memberIndex].track = newTrack;
+                state.members[memberIndex].xp = newXp;
                 refreshUI(); 
                 closeModal('editMemberModal'); 
-                showToast('تم تعديل تخصص العضو بنجاح');
+                showToast('تم تعديل بيانات العضو بنجاح');
             }
         }
 
         function deleteMember(id) {
-            if(confirm('هل أنت متأكد من حذف هذا العضو؟ سيتم حذف جميع تحدياته أيضاً.')) {
+            const member = state.members.find(m => m.id === id);
+            if (!member) return;
+            let msg = 'هل أنت متأكد من حذف هذا العضو؟ سيتم حذف جميع تحدياته أيضاً.';
+            if (member.email) msg += '\n\nملاحظة: لن يتم حذف حساب Firebase Auth الخاص به، لكنه لن يتمكن من الدخول لأنه غير مرتبط بأي عضو.';
+            if(confirm(msg)) {
                 state.members = state.members.filter(m => m.id !== id);
                 state.challenges = state.challenges.filter(c => c.memberId !== id);
                 refreshUI(); 
@@ -2019,6 +2981,7 @@
             }
             const defaultXP = document.getElementById('default-xp').value;
             document.getElementById('challenge-xp').value = defaultXP;
+            populateChallengeRuleDropdown();
             openModal('addChallengeModal');
         }
 
@@ -2030,7 +2993,19 @@
             const xp = parseInt(document.getElementById('challenge-xp').value);
             if(!title) { showToast('الرجاء إدخال عنوان التحدي', 'danger'); return; }
             const newId = state.challenges.length > 0 ? Math.max(...state.challenges.map(c => c.id)) + 1 : 1;
-            state.challenges.push({ id: newId, memberId, title, week, month, xp, completed: false });
+            state.challenges.push({ 
+                id: newId, 
+                memberId, 
+                title, 
+                week, 
+                month, 
+                xp, 
+                completed: false,
+                status: 'pending',  // pending | done | not_done
+                reason: '',
+                solution: '',
+                adminApproved: true // الأدمن منشئها
+            });
             closeModal('addChallengeModal'); 
             refreshUI(); 
             showToast('تم إضافة التحدي'); 
@@ -2074,41 +3049,84 @@
             }
         }
 
-        function toggleChallengeComplete(challengeId) {
+        function deleteChallenge(id) {
+            const ch = state.challenges.find(c => c.id === id);
+            if (!ch) return;
+            if (!confirm('هل أنت متأكد من حذف هذا التحدي؟')) return;
+            // لو كان منجز، خصم النقاط من العضو
+            if (ch.completed) {
+                const member = state.members.find(m => m.id === ch.memberId);
+                if (member) { member.xp -= ch.xp; if (member.xp < 0) member.xp = 0; }
+            }
+            state.challenges = state.challenges.filter(c => c.id !== id);
+            refreshUI();
+            showToast('تم حذف التحدي', 'danger');
+        }
+
+        // المشرف يحدد الحالة: done أو not_done
+        function setChallengeStatus(challengeId, newStatus) {
             const challenge = state.challenges.find(c => c.id === challengeId);
             if (!challenge) return;
             const member = state.members.find(m => m.id === challenge.memberId);
-            if (!challenge.completed) {
-                challenge.completed = true;
-                if (member) { member.xp += challenge.xp; showToast(`تم إضافة ${challenge.xp} XP لـ ${member.name}`); }
-            } else {
-                challenge.completed = false;
-                if (member) { member.xp -= challenge.xp; if(member.xp < 0) member.xp = 0; showToast(`تم خصم ${challenge.xp} XP من ${member.name}`, 'info'); }
+            
+            if (newStatus === 'done') {
+                if (!challenge.completed) {
+                    challenge.completed = true;
+                    challenge.status = 'done';
+                    if (member) { member.xp += challenge.xp; showToast(`تم إضافة ${challenge.xp} XP لـ ${member.name}`); }
+                } else {
+                    // إلغاء الإنجاز
+                    challenge.completed = false;
+                    challenge.status = 'pending';
+                    if (member) { member.xp -= challenge.xp; if (member.xp < 0) member.xp = 0; showToast(`تم خصم ${challenge.xp} XP من ${member.name}`, 'info'); }
+                }
+            } else if (newStatus === 'not_done') {
+                if (challenge.status === 'not_done') {
+                    challenge.status = 'pending';
+                    showToast('تم إلغاء حالة "لم ينجز"', 'info');
+                } else {
+                    // لو كان منجز، ارجع النقاط
+                    if (challenge.completed && member) { member.xp -= challenge.xp; if (member.xp < 0) member.xp = 0; }
+                    challenge.completed = false;
+                    challenge.status = 'not_done';
+                    showToast('تم وضع التحدي كـ "لم ينجز"', 'info');
+                }
             }
             refreshUI();
         }
 
         function viewMemberDetails(id) {
-            if (!isLoggedIn()) { showLoginView(); return; }
+            if (!isLoggedIn() || getCurrentRole() !== 'admin') { showLoginView(); return; }
             currentDetailMemberId = id;
             const member = state.members.find(m => m.id === id);
             if(!member) return;
             document.getElementById('detail-name').innerText = member.name;
             document.getElementById('detail-track').innerText = member.track;
             document.getElementById('detail-xp').innerText = member.xp + ' XP';
+            document.getElementById('detail-progress').innerText = getMemberProgress(id) + '%';
             const tbody = document.getElementById('detail-table-body');
             const challenges = state.challenges.filter(c => c.memberId === id);
             if(challenges.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">لا توجد تحديات مسندة</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد تحديات مسندة</td></tr>';
             } else {
-                tbody.innerHTML = challenges.map(c => `
-                    <tr>
-                        <td data-label="التحدي">${c.title}</td>
-                        <td data-label="الأسبوع">${c.week}</td>
-                        <td data-label="نقاط XP">${c.xp}</td>
-                        <td data-label="الحالة"><span class="status-badge ${c.completed ? 'status-success' : 'status-danger'}">${c.completed ? 'منجز' : 'لم ينجز'}</span></td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = challenges.map(c => {
+                    let statusText, statusClass;
+                    if (c.completed) { statusText = 'منجز'; statusClass = 'status-success'; }
+                    else if (c.status === 'not_done') { statusText = 'لم ينجز'; statusClass = 'status-danger'; }
+                    else { statusText = 'قيد التنفيذ'; statusClass = 'status-info'; }
+                    const reasonText = c.status === 'not_done' && c.reason
+                        ? `<strong>${c.reason}</strong>${c.solution ? '<br><small>الحل: ' + c.solution + '</small>' : ''}`
+                        : '--';
+                    return `
+                        <tr>
+                            <td data-label="التحدي">${c.title}</td>
+                            <td data-label="الأسبوع">${c.week}</td>
+                            <td data-label="نقاط XP">${c.xp}</td>
+                            <td data-label="الحالة"><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td data-label="السبب / الحل">${reasonText}</td>
+                        </tr>
+                    `;
+                }).join('');
             }
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.getElementById('member-details').classList.add('active');
@@ -2120,6 +3138,7 @@
             const defaultXP = document.getElementById('default-xp').value;
             document.getElementById('challenge-member').value = currentDetailMemberId;
             document.getElementById('challenge-xp').value = defaultXP;
+            populateChallengeRuleDropdown();
             openModal('addChallengeModal');
         }
 
@@ -2129,13 +3148,367 @@
             overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.classList.remove('open'); });
         });
 
-        // تصدير الدوال للنطاق العام (عشان تستخدم في onclick)
+        // ============================================================
+        // ================ STUDENT VIEW FUNCTIONS ====================
+        // ============================================================
+
+        function refreshStudentView() {
+            if (!currentStudentMemberId) {
+                // لعله لم يُحمّل بعد من sessionStorage
+                const savedId = parseInt(sessionStorage_safe.getItem('studentMemberId'));
+                if (savedId) currentStudentMemberId = savedId;
+            }
+            if (!currentStudentMemberId) return;
+
+            const member = state.members.find(m => m.id === currentStudentMemberId);
+            if (!member) {
+                // العضو حُذف
+                sessionStorage_safe.removeItem('studentMemberId');
+                sessionStorage_safe.removeItem('isLoggedIn');
+                sessionStorage_safe.removeItem('userRole');
+                currentStudentMemberId = null;
+                const studentLayout = document.getElementById('student-layout');
+                if (studentLayout && studentLayout.classList.contains('active')) {
+                    showGuestView();
+                    showToast('حسابك لم يعد موجوداً', 'danger');
+                }
+                return;
+            }
+
+            // Hero
+            const nameEl = document.getElementById('student-hero-name');
+            const trackEl = document.getElementById('student-hero-track');
+            const xpEl = document.getElementById('student-hero-xp');
+            const avatarEl = document.getElementById('student-hero-avatar');
+            if (nameEl) nameEl.innerText = member.name;
+            if (trackEl) trackEl.innerText = member.track;
+            if (xpEl) xpEl.innerText = member.xp;
+            if (avatarEl) avatarEl.src = `https://picsum.photos/seed/${member.avatar}/100/100`;
+
+            renderStudentTasks();
+            
+            // لو كانت الصفحة النشطة
+            const activeSt = document.querySelector('.student-section.active');
+            if (activeSt) {
+                if (activeSt.id === 'student-section-progress') renderStudentProgressChart();
+                if (activeSt.id === 'student-section-leaderboard') renderStudentLeaderboard();
+            }
+        }
+
+        function renderStudentTasks() {
+            const container = document.getElementById('student-tasks-list');
+            if (!container || !currentStudentMemberId) return;
+            
+            const myTasks = state.challenges
+                .filter(c => c.memberId === currentStudentMemberId)
+                .sort((a, b) => {
+                    // pending أولاً، ثم not_done، ثم done
+                    const order = { 'pending': 0, 'not_done': 1, 'done': 2 };
+                    const sa = order[a.completed ? 'done' : (a.status || 'pending')] ?? 0;
+                    const sb = order[b.completed ? 'done' : (b.status || 'pending')] ?? 0;
+                    if (sa !== sb) return sa - sb;
+                    return (b.week || 0) - (a.week || 0);
+                });
+            
+            if (myTasks.length === 0) {
+                container.innerHTML = '<div style="padding:2rem; text-align:center; color:var(--text-grey); background:var(--card-bg); border-radius:12px; border:1px dashed var(--border-color);"><i class="fas fa-inbox" style="font-size:3rem; margin-bottom:1rem; opacity:0.3;"></i><br>لا توجد مهام مسندة لك حالياً</div>';
+                return;
+            }
+
+            container.innerHTML = myTasks.map(task => {
+                const status = task.completed ? 'done' : (task.status || 'pending');
+                let badgeClass, badgeText, badgeIcon;
+                if (status === 'done') { badgeClass = 'status-success'; badgeText = 'منجز ✅'; badgeIcon = 'fa-check-circle'; }
+                else if (status === 'not_done') { badgeClass = 'status-danger'; badgeText = 'لم ينجز'; badgeIcon = 'fa-times-circle'; }
+                else { badgeClass = 'status-warning'; badgeText = 'قيد التنفيذ'; badgeIcon = 'fa-clock'; }
+
+                const monthNames = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+                // لو الحالة not_done، اعرض صندوق السبب
+                let reasonBox = '';
+                if (status === 'not_done') {
+                    const currentReason = task.reason || '';
+                    const currentSolution = task.solution || '';
+                    const reasons = ['إهمال', 'وقت غير مناسب', 'مهام كثيرة'];
+                    reasonBox = `
+                        <div class="task-reason-box">
+                            <h4><i class="fas fa-exclamation-triangle"></i> سبب عدم الإنجاز (مطلوب)</h4>
+                            <div class="reason-options">
+                                ${reasons.map(r => `
+                                    <button type="button" class="reason-chip ${currentReason === r ? 'selected' : ''}" 
+                                        onclick="selectTaskReason(${task.id}, '${r}')">
+                                        ${r}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <label style="display:block; margin-bottom:6px; font-size:0.85rem; font-weight:600;">كيف ستحل هذه المشكلة؟</label>
+                            <textarea class="reason-solution" placeholder="اكتب خطتك لحل المشكلة..." 
+                                id="task-solution-${task.id}">${currentSolution}</textarea>
+                            <button class="btn btn-primary" style="margin-top:10px; width:100%;" onclick="saveTaskSolution(${task.id})">
+                                <i class="fas fa-save"></i> حفظ السبب والحل
+                            </button>
+                        </div>
+                    `;
+                }
+
+                // لو done أو pending واعطى سبب قبل
+                let previousReason = '';
+                if (status !== 'not_done' && task.reason) {
+                    previousReason = `
+                        <div style="margin-top:0.75rem; padding:0.5rem; background:#f3f4f6; border-radius:6px; font-size:0.8rem; color:var(--text-grey);">
+                            <i class="fas fa-history"></i> سبب سابق: ${task.reason}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="task-card ${status}">
+                        <div class="task-header">
+                            <div style="flex:1; min-width:200px;">
+                                <div class="task-title">${task.title}</div>
+                                <div class="task-meta">
+                                    <span><i class="fas fa-calendar-week"></i> أسبوع ${task.week}</span>
+                                    <span><i class="fas fa-calendar"></i> ${monthNames[task.month] || 'شهر ' + task.month}</span>
+                                    <span><i class="fas fa-coins" style="color:var(--xb-gold);"></i> ${task.xp} XP</span>
+                                </div>
+                            </div>
+                            <span class="status-badge ${badgeClass}"><i class="fas ${badgeIcon}"></i> ${badgeText}</span>
+                        </div>
+                        ${reasonBox}
+                        ${previousReason}
+                        ${status === 'pending' ? '<div style="margin-top:0.75rem; padding:0.5rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; font-size:0.8rem; color:#1e40af;"><i class="fas fa-info-circle"></i> ينتظر تقييم المشرف. لا يمكنك تغيير الحالة بنفسك.</div>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // اختيار سبب عدم الإنجاز (حفظ مؤقت في الحالة)
+        function selectTaskReason(taskId, reason) {
+            const task = state.challenges.find(c => c.id === taskId);
+            if (!task) return;
+            // تأكد أن الطالب يعدل على مهمته فقط
+            if (task.memberId !== currentStudentMemberId) {
+                showToast('ليس لديك صلاحية', 'danger');
+                return;
+            }
+            if (task.status !== 'not_done') {
+                showToast('لا يمكن تعديل السبب إلا لمهمة "لم ينجز"', 'danger');
+                return;
+            }
+            task.reason = reason;
+            saveData();
+            renderStudentTasks();
+            showToast('تم اختيار السبب: ' + reason, 'info');
+        }
+
+        function saveTaskSolution(taskId) {
+            const task = state.challenges.find(c => c.id === taskId);
+            if (!task) return;
+            if (task.memberId !== currentStudentMemberId) {
+                showToast('ليس لديك صلاحية', 'danger');
+                return;
+            }
+            if (task.status !== 'not_done') {
+                showToast('لا يمكن حفظ الحل إلا لمهمة "لم ينجز"', 'danger');
+                return;
+            }
+            const solutionEl = document.getElementById('task-solution-' + taskId);
+            if (!solutionEl) return;
+            const solution = (solutionEl.value || '').trim();
+            if (!task.reason) {
+                showToast('اختر سبباً أولاً', 'danger');
+                return;
+            }
+            if (!solution) {
+                showToast('اكتب كيف ستحل المشكلة', 'danger');
+                return;
+            }
+            task.solution = solution;
+            saveData();
+            showToast('تم حفظ السبب والحل. سيراها المشرف ✅', 'success');
+        }
+
+        // Chart.js للطالب
+        function renderStudentProgressChart() {
+            if (!currentStudentMemberId || typeof Chart === 'undefined') return;
+            const member = state.members.find(m => m.id === currentStudentMemberId);
+            if (!member) return;
+
+            const myTasks = state.challenges.filter(c => c.memberId === currentStudentMemberId);
+            const doneTasks = myTasks.filter(c => c.completed);
+            const doneCount = doneTasks.length;
+            const totalCount = myTasks.length;
+            const rate = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
+
+            document.getElementById('st-total-xp').innerText = member.xp;
+            document.getElementById('st-done-count').innerText = doneCount;
+            document.getElementById('st-rate').innerText = rate + '%';
+            
+            const ratingEl = document.getElementById('st-rating');
+            if (rate >= 80) { ratingEl.innerText = 'ممتاز 🌟'; ratingEl.style.color = 'var(--success)'; }
+            else if (rate >= 50) { ratingEl.innerText = 'جيد 👍'; ratingEl.style.color = 'var(--warning)'; }
+            else { ratingEl.innerText = 'تحتاج جهد 💪'; ratingEl.style.color = 'var(--danger)'; }
+
+            // بيانات Chart.js
+            const weeksMap = {};
+            doneTasks.sort((a, b) => a.week - b.week).forEach(t => {
+                weeksMap[t.week] = (weeksMap[t.week] || 0) + t.xp;
+            });
+            const weeks = Object.keys(weeksMap).map(w => parseInt(w)).sort((a, b) => a - b);
+            
+            // cumulative
+            let cumulative = 0;
+            const cumulativeData = weeks.map(w => { cumulative += weeksMap[w]; return cumulative; });
+            const weeklyData = weeks.map(w => weeksMap[w]);
+            const labels = weeks.map(w => 'أسبوع ' + w);
+
+            const canvas = document.getElementById('student-progress-chart');
+            if (!canvas) return;
+
+            // تدمير المخطط السابق لو موجود
+            if (studentChart) {
+                studentChart.destroy();
+                studentChart = null;
+            }
+
+            if (weeks.length === 0) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '16px Cairo';
+                ctx.textAlign = 'center';
+                ctx.fillText('لا توجد بيانات كافية بعد - أنجز بعض المهام أولاً!', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const isDark = document.body.classList.contains('dark-mode');
+            const textColor = isDark ? '#e2e8f0' : '#374151';
+            const gridColor = isDark ? '#334155' : '#e5e7eb';
+
+            studentChart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'نقاط متراكمة',
+                            data: cumulativeData,
+                            borderColor: '#7C5CFF',
+                            backgroundColor: 'rgba(124, 92, 255, 0.15)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#7C5CFF',
+                            pointBorderWidth: 3
+                        },
+                        {
+                            label: 'نقاط الأسبوع',
+                            data: weeklyData,
+                            borderColor: '#FBBF24',
+                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                            fill: false,
+                            tension: 0.4,
+                            borderDash: [6, 6],
+                            borderWidth: 2,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#FBBF24'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: textColor, font: { family: 'Cairo', size: 13 } }
+                        },
+                        tooltip: {
+                            bodyFont: { family: 'Cairo' },
+                            titleFont: { family: 'Cairo' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: textColor, font: { family: 'Cairo' } },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: textColor, font: { family: 'Cairo' } },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderStudentLeaderboard() {
+            const container = document.getElementById('student-leaderboard');
+            if (!container) return;
+            const sorted = [...state.members].sort((a, b) => b.xp - a.xp).slice(0, 10);
+            if (sorted.length === 0) {
+                container.innerHTML = '<div style="padding:2rem; text-align:center; color:var(--text-grey);">لا يوجد أعضاء بعد</div>';
+                return;
+            }
+            container.innerHTML = sorted.map((m, i) => {
+                const isMe = m.id === currentStudentMemberId;
+                return `
+                <div class="lb-item" style="${isMe ? 'background:#F3EEFF; border-radius:8px;' : ''}">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i+1)}</span>
+                        <img src="https://picsum.photos/seed/${m.avatar}/35/35" style="border-radius:50%">
+                        <span style="${isMe ? 'font-weight:800; color:var(--primary);' : ''}">${m.name}${isMe ? ' (أنت)' : ''}</span>
+                    </div>
+                    <span class="xp-tag"><i class="fas fa-coins"></i> ${m.xp} XP</span>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function loadStudentProfile() {
+            if (!currentStudentMemberId) return;
+            const member = state.members.find(m => m.id === currentStudentMemberId);
+            if (!member) return;
+            const nameEl = document.getElementById('profile-name');
+            const emailEl = document.getElementById('profile-email');
+            const avatarEl = document.getElementById('profile-avatar');
+            const bioEl = document.getElementById('profile-bio');
+            if (nameEl) nameEl.value = member.name || '';
+            if (emailEl) emailEl.value = member.email || '';
+            if (avatarEl) avatarEl.value = member.avatar || '';
+            if (bioEl) bioEl.value = member.bio || '';
+        }
+
+        function saveStudentProfile() {
+            if (!currentStudentMemberId) return;
+            const member = state.members.find(m => m.id === currentStudentMemberId);
+            if (!member) return;
+            const newName = (document.getElementById('profile-name').value || '').trim();
+            const newAvatar = (document.getElementById('profile-avatar').value || '').trim();
+            const newBio = (document.getElementById('profile-bio').value || '').trim();
+            if (!newName) { showToast('الاسم لا يمكن أن يكون فارغاً', 'danger'); return; }
+            member.name = newName;
+            if (newAvatar) member.avatar = newAvatar;
+            member.bio = newBio;
+            saveData();
+            refreshStudentView();
+            showToast('تم حفظ التعديلات ✅', 'success');
+        }
+
+        // ============================================================
+        // تصدير الدوال للنطاق العام (للـ onclick)
+        // ============================================================
         window.navigate = navigate;
         window.handleRouteChange = handleRouteChange;
         window.attemptLogin = attemptLogin;
+        window.attemptStudentLogin = attemptStudentLogin;
+        window.switchLoginTab = switchLoginTab;
         window.showLoginView = showLoginView;
         window.showGuestView = showGuestView;
         window.logout = logout;
+        window.toggleDarkMode = toggleDarkMode;
         window.setMobileMode = setMobileMode;
         window.setDesktopMode = setDesktopMode;
         window.toggleSidebar = toggleSidebar;
@@ -2150,7 +3523,8 @@
         window.addNewChallenge = addNewChallenge;
         window.openEditChallengeModal = openEditChallengeModal;
         window.saveChallengeEdit = saveChallengeEdit;
-        window.toggleChallengeComplete = toggleChallengeComplete;
+        window.deleteChallenge = deleteChallenge;
+        window.setChallengeStatus = setChallengeStatus;
         window.prepareAddChallengeForDetail = prepareAddChallengeForDetail;
         window.filterExplorers = filterExplorers;
         window.renderReportChart = renderReportChart;
@@ -2159,6 +3533,15 @@
         window.addTrackInput = addTrackInput;
         window.saveTrack = saveTrack;
         window.deleteTrack = deleteTrack;
+        window.addXpRule = addXpRule;
+        window.deleteXpRule = deleteXpRule;
+        window.saveXpRules = saveXpRules;
+        window.applyXpRuleToChallenge = applyXpRuleToChallenge;
+        window.runPublicSearch = runPublicSearch;
+        window.showStudentSection = showStudentSection;
+        window.selectTaskReason = selectTaskReason;
+        window.saveTaskSolution = saveTaskSolution;
+        window.saveStudentProfile = saveStudentProfile;
 
     </script>
 </body>

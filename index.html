@@ -1,14 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-
-  <head>
-    <meta charset="UTF-8">
-    <title>Untitled</title>
-    
-
-  </head>
-    
-  <body>
   <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -8488,11 +8477,754 @@ window.declareWinner = declareWinner;
     overrideLeaderEconomy();
   })();
   
-</script>
+
+
+    // ============================================================
+    //   إدارة صلاحيات الأعضاء — صفحة مستقلة (ADD-ONLY)
+    // ============================================================
+    (function(){
+      let _mpmSearch = '';
+      let _mpmTrack = 'all';
+      let _mpmRank = 'all';
+      let _mpmRole = 'all';
+      let _mpmSelected = null;
+
+      function escH(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+      function ensureSection(){
+        if (document.getElementById('mpm-section')) return;
+        const main = document.querySelector('main.main-content') || document.querySelector('main');
+        if (!main) return;
+        const sec = document.createElement('section');
+        sec.id = 'mpm-section';
+        sec.className = 'section';
+        sec.style.display = 'none';
+        sec.innerHTML =
+          '<div class="page-header"><h1><i class="fas fa-user-shield"></i> إدارة صلاحيات الأعضاء</h1>' +
+          '<p style="color:var(--text-grey);">ابحث عن عضو، حدّد صلاحياته فردياً، أو طبّق قالباً جاهزاً حسب الرتبة.</p></div>' +
+          '<div id="mpm-body" style="display:grid; grid-template-columns: 1fr 1.4fr; gap:1rem; align-items:start;">' +
+            '<div id="mpm-list-pane" style="background:var(--card-bg); padding:1rem; border-radius:12px; border:1px solid var(--border-color); max-height:78vh; overflow:auto;"></div>' +
+            '<div id="mpm-edit-pane" style="background:var(--card-bg); padding:1rem; border-radius:12px; border:1px solid var(--border-color); max-height:78vh; overflow:auto;"></div>' +
+          '</div>';
+        main.appendChild(sec);
+        const mq = window.matchMedia('(max-width: 900px)');
+        const apply = () => { const b = document.getElementById('mpm-body'); if (b) b.style.gridTemplateColumns = mq.matches ? '1fr' : '1fr 1.4fr'; };
+        try { mq.addEventListener('change', apply); } catch(_) { mq.addListener && mq.addListener(apply); }
+        apply();
+      }
+
+      function ensureNav(){
+        if (document.getElementById('mpm-nav-link')) return;
+        const ref = document.querySelector('a[onclick*="openPermissionsCenter"]');
+        if (!ref || !ref.parentElement) return;
+        const li = document.createElement('li');
+        li.className = 'nav-item';
+        li.innerHTML = '<a class="nav-link" id="mpm-nav-link" onclick="openMemberPermissionsManager()" data-target="mpm-section"><i class="fas fa-user-shield"></i> صلاحيات الأعضاء</a>';
+        ref.parentElement.parentElement.insertBefore(li, ref.parentElement.nextSibling);
+      }
+
+      function openMemberPermissionsManager(){
+        try { if (typeof permIsAdmin === 'function' && !permIsAdmin()) { alert('صلاحية المشرف مطلوبة'); return; } } catch(_) {}
+        ensureSection();
+        document.querySelectorAll('main.main-content section.section, main section.section').forEach(s => s.style.display = 'none');
+        const sec = document.getElementById('mpm-section'); if (sec) sec.style.display = 'block';
+        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+        const link = document.getElementById('mpm-nav-link'); if (link) link.classList.add('active');
+        // Reset list pane so filters get rebuilt fresh
+        const lp = document.getElementById('mpm-list-pane'); if (lp) lp.innerHTML = '';
+        renderList();
+      }
+      window.openMemberPermissionsManager = openMemberPermissionsManager;
+
+      function getRanksList(){
+        return [
+          { id:'explorer', name:'مستكشف', color:'#10b981', icon:'fa-compass' },
+          { id:'creator', name:'مبدع', color:'#3b82f6', icon:'fa-paint-brush' },
+          { id:'executive', name:'مدير تنفيذي', color:'#f59e0b', icon:'fa-user-tie' },
+          { id:'leader', name:'قائد', color:'#8b5cf6', icon:'fa-crown' },
+          { id:'admin', name:'مشرف نظام', color:'#ef4444', icon:'fa-user-shield' }
+        ];
+      }
+
+      function getTracksLocal(){
+        try { if (typeof getTracks === 'function') return getTracks(); } catch(_) {}
+        const set = new Set(); (state.members||[]).forEach(m => { if (m.track) set.add(m.track); });
+        return Array.from(set);
+      }
+
+      function renderList(){
+        const pane = document.getElementById('mpm-list-pane'); if (!pane) return;
+        const tracks = getTracksLocal();
+        const ranks = getRanksList();
+        const members = (state.members || []).slice();
+        const filtered = members.filter(m => {
+          const s = (_mpmSearch || '').trim().toLowerCase();
+          if (s) {
+            const hay = ((m.name||'') + ' ' + (m.email||'') + ' ' + (m.uid||'')).toLowerCase();
+            if (!hay.includes(s)) return false;
+          }
+          if (_mpmTrack !== 'all' && (m.track || '') !== _mpmTrack) return false;
+          if (_mpmRole !== 'all' && (m.role || 'student') !== _mpmRole) return false;
+          if (_mpmRank !== 'all') {
+            const r = (typeof computeMemberRank === 'function') ? computeMemberRank(m) : 'explorer';
+            const stored = m.rank || r;
+            if (stored !== _mpmRank) return false;
+          }
+          return true;
+        });
+
+        // Only build filter UI if not present (preserves focus during typing)
+        let filtersHTML = '';
+        const hasFilters = !!document.getElementById('mpm-q');
+        if (!hasFilters) filtersHTML =
+          '<div style="display:flex; flex-direction:column; gap:.5rem; margin-bottom:.75rem;">' +
+            '<input type="text" id="mpm-q" class="form-input" placeholder="🔎 ابحث بالاسم أو البريد..." value="' + escH(_mpmSearch) + '">' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:.5rem;">' +
+              '<select id="mpm-f-track" class="form-select"><option value="all">كل المسارات</option>' + tracks.map(t => '<option value="' + escH(t) + '"' + (t === _mpmTrack ? ' selected' : '') + '>' + escH(t) + '</option>').join('') + '</select>' +
+              '<select id="mpm-f-rank" class="form-select"><option value="all">كل المستويات</option>' + ranks.map(r => '<option value="' + r.id + '"' + (r.id === _mpmRank ? ' selected' : '') + '>' + r.name + '</option>').join('') + '</select>' +
+              '<select id="mpm-f-role" class="form-select">' +
+                '<option value="all"' + (_mpmRole==='all'?' selected':'') + '>كل الأدوار</option>' +
+                '<option value="student"' + (_mpmRole==='student'?' selected':'') + '>طالب</option>' +
+                '<option value="admin"' + (_mpmRole==='admin'?' selected':'') + '>مشرف</option>' +
+              '</select>' +
+            '</div>' +
+          '</div>';
+        const listHTML = '<div style="font-size:.85rem; color:var(--text-grey); margin-bottom:.5rem;">عدد النتائج: <strong>' + filtered.length + '</strong></div>' +
+          (filtered.length ? filtered.map(m => {
+            const rank = (typeof computeMemberRank === 'function') ? computeMemberRank(m) : 'explorer';
+            const rk = ranks.find(r => r.id === rank) || ranks[0];
+            const stored = Array.isArray(m.permissions) ? m.permissions.length : 0;
+            const isSel = (_mpmSelected === m.uid);
+            return '<div onclick="window.__mpmSelect(\'' + m.uid + '\')" style="cursor:pointer; padding:.6rem; margin-bottom:.4rem; border-radius:8px; border:2px solid ' + (isSel ? rk.color : 'var(--border-color)') + '; background:' + (isSel ? rk.color + '15' : 'transparent') + ';">' +
+              '<div style="display:flex; align-items:center; gap:.5rem;">' +
+                '<i class="fas ' + rk.icon + '" style="color:' + rk.color + ';"></i>' +
+                '<strong style="flex:1;">' + escH(m.name || '--') + '</strong>' +
+                '<span style="font-size:.7rem; background:' + rk.color + '; color:#fff; padding:.15rem .5rem; border-radius:8px;">' + rk.name + '</span>' +
+              '</div>' +
+              '<div style="font-size:.75rem; color:var(--text-grey); margin-top:.25rem;">' +
+                '<i class="fas fa-envelope"></i> ' + escH(m.email || '--') + ' • <i class="fas fa-compass"></i> ' + escH(m.track || '--') + ' • ' + stored + ' صلاحية' +
+              '</div>' +
+            '</div>';
+          }).join('') : '<div style="text-align:center; color:var(--text-grey); padding:1rem;">لا نتائج مطابقة</div>');
+
+        if (!hasFilters) {
+          pane.innerHTML = filtersHTML + '<div id="mpm-list-rows"></div>';
+          const q = document.getElementById('mpm-q');
+          if (q) {
+            q.oninput = e => { _mpmSearch = e.target.value; renderList(); };
+            // Keep focus
+            setTimeout(() => { try { q.focus(); const v = q.value; q.value=''; q.value = v; } catch(_) {} }, 0);
+          }
+          const ft = document.getElementById('mpm-f-track'); if (ft) ft.onchange = e => { _mpmTrack = e.target.value; renderList(); };
+          const fr = document.getElementById('mpm-f-rank'); if (fr) fr.onchange = e => { _mpmRank = e.target.value; renderList(); };
+          const fro = document.getElementById('mpm-f-role'); if (fro) fro.onchange = e => { _mpmRole = e.target.value; renderList(); };
+        }
+        const rowsHost = document.getElementById('mpm-list-rows');
+        if (rowsHost) rowsHost.innerHTML = listHTML;
+        renderEditor();
+      }
+
+      window.__mpmSelect = function(uid){ _mpmSelected = uid; renderList(); };
+
+      function renderEditor(){
+        const pane = document.getElementById('mpm-edit-pane'); if (!pane) return;
+        if (!_mpmSelected) {
+          pane.innerHTML = '<div style="text-align:center; color:var(--text-grey); padding:3rem 1rem;"><i class="fas fa-hand-pointer" style="font-size:2.5rem; margin-bottom:1rem; display:block;"></i>اختر عضواً من القائمة لتعديل صلاحياته</div>';
+          return;
+        }
+        const m = (state.members || []).find(x => x.uid === _mpmSelected);
+        if (!m) { pane.innerHTML = '<div>لم يُعثر على العضو</div>'; return; }
+        const ranks = getRanksList();
+        const computedRank = (typeof computeMemberRank === 'function') ? computeMemberRank(m) : 'explorer';
+        const currentRank = m.rank || computedRank;
+        const currentPerms = Array.isArray(m.permissions) && m.permissions.length ? m.permissions.slice() : ((typeof getPermissions === 'function') ? getPermissions(currentRank) : []);
+        const allPerms = (typeof getPermissions === 'function') ? getPermissions('admin') : [];
+        const labels = window.PERM_LABELS || {};
+        const rk = ranks.find(r => r.id === currentRank) || ranks[0];
+
+        pane.innerHTML =
+          '<div style="border-right:4px solid ' + rk.color + '; padding-right:.75rem; margin-bottom:1rem;">' +
+            '<h2 style="margin:0;"><i class="fas ' + rk.icon + '" style="color:' + rk.color + ';"></i> ' + escH(m.name || '--') + '</h2>' +
+            '<div style="font-size:.85rem; color:var(--text-grey);">' + escH(m.email || '--') + ' • ' + escH(m.track || '--') + '</div>' +
+          '</div>' +
+          '<div style="background:#eff6ff; padding:.75rem; border-radius:8px; border:1px solid #bfdbfe; margin-bottom:1rem;">' +
+            '<label style="font-weight:700; display:block; margin-bottom:.5rem;"><i class="fas fa-magic"></i> اختصار: تطبيق قالب رتبة</label>' +
+            '<div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">' +
+              '<select id="mpm-rank-pick" class="form-select" style="flex:1; min-width:160px;">' +
+                ranks.map(r => '<option value="' + r.id + '"' + (r.id === currentRank ? ' selected' : '') + '>' + r.name + ' (' + ((typeof getPermissions==='function')?getPermissions(r.id).length:0) + ' صلاحية)</option>').join('') +
+              '</select>' +
+              '<button class="btn btn-sm btn-secondary" onclick="window.__mpmApplyRankPreset()"><i class="fas fa-bolt"></i> تطبيق القالب</button>' +
+            '</div>' +
+            '<div style="font-size:.75rem; color:var(--text-grey); margin-top:.5rem;">سيتم تحديد جميع الصلاحيات الافتراضية لهذه الرتبة. تستطيع التعديل يدوياً قبل الحفظ.</div>' +
+          '</div>' +
+          '<div style="margin-bottom:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">' +
+            '<button class="btn btn-sm btn-secondary" onclick="window.__mpmToggleAll(true)"><i class="fas fa-check-double"></i> تحديد الكل</button>' +
+            '<button class="btn btn-sm btn-secondary" onclick="window.__mpmToggleAll(false)"><i class="far fa-square"></i> إلغاء الكل</button>' +
+          '</div>' +
+          '<div id="mpm-perm-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:.4rem; margin-bottom:1rem;">' +
+            allPerms.map(perm => {
+              const checked = currentPerms.includes(perm);
+              return '<label style="display:flex; align-items:center; gap:.5rem; padding:.5rem; background:' + (checked ? '#f0fdf4' : 'var(--bg-color)') + '; border:1px solid ' + (checked ? '#86efac' : 'var(--border-color)') + '; border-radius:6px; cursor:pointer; font-size:.85rem;">' +
+                '<input type="checkbox" data-perm="' + perm + '"' + (checked ? ' checked' : '') + '>' +
+                '<span>' + escH(labels[perm] || perm) + '</span>' +
+              '</label>';
+            }).join('') +
+          '</div>' +
+          '<div style="position:sticky; bottom:0; background:var(--card-bg); padding-top:.75rem; border-top:1px solid var(--border-color); display:flex; gap:.5rem;">' +
+            '<button class="btn btn-primary" id="mpm-save-btn" style="flex:1;" onclick="window.__mpmSave()"><i class="fas fa-save"></i> حفظ الصلاحيات في قاعدة البيانات</button>' +
+            '<button class="btn btn-secondary" onclick="window.__mpmReset()"><i class="fas fa-undo"></i> استعادة</button>' +
+          '</div>';
+
+        pane.querySelectorAll('input[type=checkbox][data-perm]').forEach(cb => {
+          cb.addEventListener('change', () => {
+            const lbl = cb.parentElement;
+            if (cb.checked) { lbl.style.background = '#f0fdf4'; lbl.style.borderColor = '#86efac'; }
+            else { lbl.style.background = 'var(--bg-color)'; lbl.style.borderColor = 'var(--border-color)'; }
+          });
+        });
+      }
+
+      window.__mpmApplyRankPreset = function(){
+        const sel = document.getElementById('mpm-rank-pick'); if (!sel) return;
+        const rankId = sel.value;
+        const perms = (typeof getPermissions === 'function') ? getPermissions(rankId) : [];
+        document.querySelectorAll('#mpm-perm-grid input[type=checkbox][data-perm]').forEach(cb => {
+          cb.checked = perms.includes(cb.dataset.perm);
+          cb.dispatchEvent(new Event('change'));
+        });
+      };
+      window.__mpmToggleAll = function(on){
+        document.querySelectorAll('#mpm-perm-grid input[type=checkbox][data-perm]').forEach(cb => {
+          cb.checked = !!on; cb.dispatchEvent(new Event('change'));
+        });
+      };
+      window.__mpmReset = function(){ renderEditor(); };
+
+      window.__mpmSave = async function(){
+        const m = (state.members || []).find(x => x.uid === _mpmSelected);
+        if (!m) { alert('لم يُعثر على العضو'); return; }
+        const sel = document.getElementById('mpm-rank-pick');
+        const rank = sel ? sel.value : (m.rank || 'explorer');
+        const perms = Array.from(document.querySelectorAll('#mpm-perm-grid input[type=checkbox][data-perm]:checked')).map(cb => cb.dataset.perm);
+        const btn = document.getElementById('mpm-save-btn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...'; }
+        let ok = false;
+        try {
+          if (window.MasarDB && typeof window.MasarDB.updateMember === 'function') {
+            ok = await window.MasarDB.updateMember(m.uid, { rank: rank, permissions: perms });
+          } else { ok = true; }
+          m.rank = rank; m.permissions = perms;
+          try { localStorage.setItem('masar_members_v1', JSON.stringify(state.members)); } catch(_) {}
+          if (ok) {
+            try { audit('admin', 'تعديل صلاحيات عضو', m.name + ' — رتبة: ' + rank + ' — عدد الصلاحيات: ' + perms.length); } catch(_) {}
+            alert('✅ تم حفظ صلاحيات ' + m.name + '\nالرتبة: ' + rank + '\nعدد الصلاحيات: ' + perms.length);
+          } else {
+            alert('⚠️ تم الحفظ محلياً فقط — تعذّر الكتابة في قاعدة البيانات.');
+          }
+          renderList();
+        } catch(e) {
+          console.error('mpm save failed', e);
+          alert('❌ خطأ أثناء الحفظ: ' + (e.message || e));
+        } finally {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> حفظ الصلاحيات في قاعدة البيانات'; }
+        }
+      };
+
+      function init(){
+        ensureNav();
+        let tries = 0;
+        const t = setInterval(() => { ensureNav(); if (++tries > 10) clearInterval(t); }, 700);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+      else init();
+      console.log('%c✓ Member Permissions Manager loaded','color:#10b981');
+    })();
+
+  
+
+    // ============================================================
+    //   مزامنة الشركات وبنود المكافآت عبر Firestore (ADD-ONLY)
+    //   - تحل مشكلة عدم رؤية القائد لشركته على جهازه
+    // ============================================================
+    (function syncCompaniesViaFirestore(){
+      if (!window.MasarDB || !window.MasarDB.listenCatalogs || !window.MasarDB.saveCatalogs) {
+        setTimeout(syncCompaniesViaFirestore, 600); return;
+      }
+      if (window.__companiesSyncInstalled) return;
+      window.__companiesSyncInstalled = true;
+
+      const MIRROR_KEYS = {
+        'masar_companies_v1': 'companies',
+        'masar_reward_presets_v1': 'rewardPresets'
+      };
+
+      // Wrap setItem to push to Firestore
+      const prevSet = localStorage.setItem.bind(localStorage);
+      localStorage.setItem = function(k, v){
+        const r = prevSet(k, v);
+        try {
+          if (!window.__mirrorIncoming && MIRROR_KEYS[k]) {
+            const data = JSON.parse(v);
+            if (window.MasarDB && window.MasarDB.saveCatalogs) {
+              window.MasarDB.saveCatalogs({ [MIRROR_KEYS[k]]: data }).catch(e => console.warn('mirror push failed', e));
+            }
+          }
+        } catch(_) {}
+        return r;
+      };
+
+      // INITIAL PUSH: send existing local companies/presets up to Firestore once
+      setTimeout(async () => {
+        try {
+          const localCos = JSON.parse(localStorage.getItem('masar_companies_v1') || '[]');
+          const localPre = JSON.parse(localStorage.getItem('masar_reward_presets_v1') || '[]');
+          const payload = {};
+          if (Array.isArray(localCos) && localCos.length) payload.companies = localCos;
+          if (Array.isArray(localPre) && localPre.length) payload.rewardPresets = localPre;
+          if (Object.keys(payload).length) {
+            await window.MasarDB.saveCatalogs(payload);
+            console.log('%c✓ pushed local companies/presets to Firestore (' + (payload.companies?payload.companies.length:0) + ' companies, ' + (payload.rewardPresets?payload.rewardPresets.length:0) + ' presets)','color:#10b981');
+          }
+        } catch(e) { console.warn('initial push failed', e); }
+      }, 2000);
+
+      // Pull on startup + listen for changes from other devices
+      window.MasarDB.listenCatalogs(data => {
+        if (!data) return;
+        let changed = false;
+        try {
+          if (Array.isArray(data.companies)) {
+            const cur = localStorage.getItem('masar_companies_v1') || '[]';
+            const next = JSON.stringify(data.companies);
+            if (cur !== next) {
+              window.__mirrorIncoming = true;
+              try { localStorage.setItem('masar_companies_v1', next); } finally { window.__mirrorIncoming = false; }
+              changed = true;
+            }
+          }
+          if (Array.isArray(data.rewardPresets)) {
+            const cur = localStorage.getItem('masar_reward_presets_v1') || '[]';
+            const next = JSON.stringify(data.rewardPresets);
+            if (cur !== next) {
+              window.__mirrorIncoming = true;
+              try { localStorage.setItem('masar_reward_presets_v1', next); } finally { window.__mirrorIncoming = false; }
+              changed = true;
+            }
+          }
+        } catch(e) { console.warn('catalogs pull error', e); }
+        if (changed) {
+          try { if (typeof renderLeaderDashboardPanel === 'function') renderLeaderDashboardPanel(); } catch(_) {}
+          try { const sec = document.getElementById('company-chats'); if (sec && sec.style.display !== 'none' && typeof openCompanyChats === 'function') openCompanyChats(); } catch(_) {}
+          try { document.dispatchEvent(new CustomEvent('masar:companies-updated')); } catch(_) {}
+        }
+      });
+
+      console.log('%c✓ Companies + presets sync via Firestore active','color:#10b981');
+    })();
+
+  
+
+    // ============================================================
+    //   إصلاح رؤية القائد لشركته + دردشة الشركة (ADD-ONLY)
+    //   يطابق leaderUid بالـuid أو الإيميل أو الاسم
+    // ============================================================
+    (function fixLeaderVisibility(){
+      if (!window.openLeaderDashboard) { setTimeout(fixLeaderVisibility, 500); return; }
+      if (window.__leaderVisibilityFixed) return;
+      window.__leaderVisibilityFixed = true;
+
+      function low(s){ return String(s||'').trim().toLowerCase(); }
+      function members(){ return (state && state.members) || []; }
+
+      // Heal companies: if leaderUid missing/orphaned but c.leader matches a member's email/name → set leaderUid
+      function healCompanies(){
+        try {
+          const raw = localStorage.getItem('masar_companies_v1') || '[]';
+          const cos = JSON.parse(raw);
+          if (!Array.isArray(cos)) return;
+          const ms = members();
+          let changed = false;
+          cos.forEach(c => {
+            const valid = c.leaderUid && ms.some(m => m.uid === c.leaderUid);
+            if (!valid && c.leader) {
+              const lf = low(c.leader);
+              const m = ms.find(x => low(x.email) === lf || low(x.name) === lf || low(x.uid) === lf);
+              if (m) { c.leaderUid = m.uid; changed = true; }
+            }
+            // Also heal exec/creator/board entries (string → object with uid)
+            ['executives','creators','board'].forEach(k => {
+              if (Array.isArray(c[k])) {
+                c[k] = c[k].map(e => {
+                  if (typeof e === 'string') {
+                    const lf = low(e);
+                    const m = ms.find(x => low(x.email) === lf || low(x.name) === lf || low(x.uid) === lf);
+                    if (m) { changed = true; return { uid: m.uid, name: m.name, email: m.email }; }
+                    return { name: e };
+                  }
+                  if (e && !e.uid && (e.email || e.name)) {
+                    const m = ms.find(x => (e.email && low(x.email) === low(e.email)) || (e.name && low(x.name) === low(e.name)));
+                    if (m) { changed = true; return { ...e, uid: m.uid }; }
+                  }
+                  return e;
+                });
+              }
+            });
+          });
+          if (changed) {
+            localStorage.setItem('masar_companies_v1', JSON.stringify(cos));
+            console.log('%c✓ healed companies (leaderUid + member uids)','color:#10b981');
+          }
+        } catch(e) { console.warn('healCompanies failed', e); }
+      }
+
+      // ----- Override openLeaderDashboard with forgiving matcher + diagnostics -----
+      const _origOpen = window.openLeaderDashboard;
+      window.openLeaderDashboard = function(){
+        healCompanies();
+        try {
+          if (typeof navigate === 'function') navigate('leader-dashboard');
+        } catch(_) {}
+        try {
+          const u = state.currentUser;
+          const picker = document.getElementById('ld-company-picker');
+          const body = document.getElementById('ld-body');
+          if (!u || !picker) return _origOpen.apply(this, arguments);
+          const cos = (typeof loadCompanies === 'function') ? loadCompanies() : [];
+          const isAdmin = (typeof permIsAdmin === 'function') && permIsAdmin();
+          const myEmail = low(u.email), myName = low(u.name), myUid = low(u.uid);
+          // DIAGNOSTIC
+          console.group('[leader-dash diag]');
+          console.log('current user:', { uid: u.uid, email: u.email, name: u.name, role: u.role });
+          console.log('lowercase compare keys: myUid=' + myUid + ' myEmail=' + myEmail + ' myName=' + myName);
+          console.log('isAdmin:', isAdmin);
+          console.log('total companies in localStorage:', cos.length);
+          cos.forEach((c, i) => console.log('  company['+i+']:', { id: c.id, name: c.name, leaderUid: c.leaderUid, leader: c.leader, execs: (c.executives||[]).length, creators: (c.creators||[]).length }));
+          console.groupEnd();
+          const matchAny = (val) => {
+            if (!val) return false;
+            if (typeof val === 'object') return matchAny(val.uid) || matchAny(val.email) || matchAny(val.name);
+            const lf = low(val);
+            return lf && (lf === myUid || lf === myEmail || lf === myName);
+          };
+          const led = isAdmin ? cos : cos.filter(c => {
+            if (matchAny(c.leaderUid)) return true;
+            if (matchAny(c.leader)) return true;
+            if (matchAny(c.leaderEmail)) return true;
+            if (matchAny(c.leaderName)) return true;
+            return false;
+          });
+          if (!led.length) {
+            picker.innerHTML = '<option>—</option>';
+            if (body) {
+              const diagHTML = '<div style="margin-top:1rem; font-size:.75rem; background:#f9fafb; padding:.75rem; border-radius:8px; text-align:right; max-width:600px; margin-left:auto; margin-right:auto;">' +
+                '<strong>معلومات تشخيصية:</strong><br>' +
+                'بريدك: <code>' + (u.email || '—') + '</code><br>' +
+                'اسمك: <code>' + (u.name || '—') + '</code><br>' +
+                'معرّفك (uid): <code style="word-break:break-all;">' + (u.uid || '—') + '</code><br>' +
+                'عدد الشركات المخزنة: <strong>' + cos.length + '</strong><br>' +
+                (cos.length ? '<br><strong>الشركات المتاحة:</strong><br>' + cos.map(c => '• ' + (c.name||'?') + ' — قائدها: <code>' + (c.leaderUid || c.leader || '—') + '</code>').join('<br>') : '') +
+                '</div>' +
+                (cos.length ? '<div style="margin-top:1rem;"><button class="btn btn-warning" onclick="window.__forceClaimCompany()"><i class="fas fa-tools"></i> إصلاح: اربط أول شركة بحسابي</button></div>' : '');
+              body.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-grey);"><i class="fas fa-crown" style="font-size:3rem; opacity:.3;"></i><div style="margin-top:1rem;">لا تقود أي شركة حالياً</div>' + diagHTML + '</div>';
+            }
+            return;
+          }
+          picker.innerHTML = led.map(c => '<option value="' + c.id + '">' + (c.logo || '🏢') + ' ' + (c.name || '') + (c.archived ? ' (مؤرشفة)' : '') + '</option>').join('');
+          if (typeof renderLeaderDashboardPanel === 'function') renderLeaderDashboardPanel();
+        } catch(e) { console.error('openLeaderDashboard fix err', e); return _origOpen.apply(this, arguments); }
+      };
+
+      // ----- Override getUserCompanies indirectly: patch openCompanyChats -----
+      const _origChats = window.openCompanyChats;
+      window.openCompanyChats = function(){
+        healCompanies();
+        try {
+          if (typeof navigate === 'function') navigate('company-chats');
+          const u = state.currentUser;
+          const body = document.getElementById('company-chats-body');
+          if (!u || !body) return _origChats.apply(this, arguments);
+          const cos = (typeof loadCompanies === 'function') ? loadCompanies() : [];
+          const isAdmin = (typeof permIsAdmin === 'function') && permIsAdmin();
+          const myEmail = low(u.email), myName = low(u.name), myUid = low(u.uid);
+          const matchEntry = e => {
+            if (!e) return false;
+            if (typeof e === 'string') { const lf = low(e); return lf === myUid || lf === myEmail || lf === myName; }
+            return (e.uid && low(e.uid) === myUid) || (e.email && low(e.email) === myEmail) || (e.name && low(e.name) === myName);
+          };
+          const accessible = isAdmin ? cos : cos.filter(c => {
+            if (c.leaderUid && low(c.leaderUid) === myUid) return true;
+            if (c.leader && matchEntry(c.leader)) return true;
+            return ['executives','creators','board'].some(k => Array.isArray(c[k]) && c[k].some(matchEntry));
+          });
+          if (!accessible.length) {
+            body.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-grey);">لست منتسباً لأي شركة بعد</div>';
+            return;
+          }
+          // Delegate to original render now that companies are healed (it uses strict uid which now matches)
+          return _origChats.apply(this, arguments);
+        } catch(e) { console.error('openCompanyChats fix err', e); return _origChats.apply(this, arguments); }
+      };
+
+      // Re-heal whenever members or companies arrive
+      setTimeout(healCompanies, 1500);
+      setTimeout(healCompanies, 3500);
+      document.addEventListener('masar:companies-updated', healCompanies);
+
+      // Manual recovery: force-claim a company by setting its leaderUid to current user's uid
+      window.__forceClaimCompany = function(){
+        try {
+          const u = state.currentUser; if (!u) return alert('سجل الدخول أولاً');
+          const cos = JSON.parse(localStorage.getItem('masar_companies_v1') || '[]');
+          if (!cos.length) return alert('لا توجد شركات');
+          if (!confirm('سيتم تعيينك قائداً للشركة: ' + cos[0].name + '\nهل تتابع؟')) return;
+          cos[0].leaderUid = u.uid;
+          cos[0].leader = u.email || u.name;
+          localStorage.setItem('masar_companies_v1', JSON.stringify(cos));
+          alert('✅ تم. أعد فتح "لوحة قيادتي".');
+          if (typeof window.openLeaderDashboard === 'function') window.openLeaderDashboard();
+        } catch(e) { alert('خطأ: ' + (e.message || e)); }
+      };
+
+      console.log('%c✓ Leader visibility fix installed','color:#10b981');
+    })();
+
+    // ============================================================
+    // [ADD] Auto-claim orphan company for leader-rank users (no manual button needed)
+    // ============================================================
+    (function autoClaimOrphan(){
+      if (window.__autoClaimInstalled) return;
+      window.__autoClaimInstalled = true;
+      function low(s){ return String(s||'').trim().toLowerCase(); }
+      function members(){ return (window.state && state.members) || []; }
+      function getStoredRank(uid){
+        try {
+          const p = JSON.parse(localStorage.getItem('masar_member_perms_v1') || '{}');
+          return (p[uid] && p[uid].rank) || null;
+        } catch(_) { return null; }
+      }
+      function tryAutoClaim(){
+        try {
+          const u = window.state && state.currentUser; if (!u) return false;
+          const cos = JSON.parse(localStorage.getItem('masar_companies_v1') || '[]');
+          if (!Array.isArray(cos) || !cos.length) return false;
+          const myEmail = low(u.email), myName = low(u.name), myUid = low(u.uid);
+          const matchAny = (val) => {
+            if (!val) return false;
+            if (typeof val === 'object') return matchAny(val.uid) || matchAny(val.email) || matchAny(val.name);
+            const lf = low(val);
+            return lf && (lf === myUid || lf === myEmail || lf === myName);
+          };
+          // Already has a matching company? skip
+          const alreadyHas = cos.some(c => matchAny(c.leaderUid) || matchAny(c.leader) || matchAny(c.leaderEmail) || matchAny(c.leaderName));
+          if (alreadyHas) return false;
+          // Determine if user is leader-rank
+          const rank = getStoredRank(u.uid);
+          const isLeader = rank === 'leader' || rank === 'co_leader' || (typeof computeMemberRank === 'function' && computeMemberRank(u) === 'leader');
+          if (!isLeader) return false;
+          // Find an orphan company (leaderUid points to someone not in members, OR matches user's email/name loosely)
+          const ms = members();
+          const orphanIdx = cos.findIndex(c => {
+            // Already orphaned: leaderUid doesn't resolve to any current member
+            if (c.leaderUid && !ms.some(m => low(m.uid) === low(c.leaderUid))) return true;
+            // Or leader name/email partially matches the user
+            if (c.leader && (low(c.leader).includes(myName) || low(c.leader).includes(myEmail.split('@')[0] || ''))) return true;
+            return false;
+          });
+          // If only one company total and no other leader claims it, auto-claim
+          let claimIdx = orphanIdx;
+          if (claimIdx < 0 && cos.length === 1) claimIdx = 0;
+          if (claimIdx < 0) return false;
+          const c = cos[claimIdx];
+          c.leaderUid = u.uid;
+          c.leaderEmail = u.email || '';
+          c.leaderName = u.name || '';
+          if (!c.leader) c.leader = u.email || u.name || u.uid;
+          localStorage.setItem('masar_companies_v1', JSON.stringify(cos));
+          console.log('%c✓ auto-claimed company "' + (c.name||'?') + '" for ' + (u.email||u.name), 'color:#10b981;font-weight:bold');
+          try { document.dispatchEvent(new CustomEvent('masar:companies-updated')); } catch(_){}
+          return true;
+        } catch(e) { console.warn('autoClaim err', e); return false; }
+      }
+      // Run on multiple triggers
+      setTimeout(tryAutoClaim, 2000);
+      setTimeout(tryAutoClaim, 5000);
+      document.addEventListener('masar:companies-updated', tryAutoClaim);
+      // Hook into openLeaderDashboard so it runs right before render
+      const _prev = window.openLeaderDashboard;
+      if (typeof _prev === 'function') {
+        window.openLeaderDashboard = function(){
+          tryAutoClaim();
+          return _prev.apply(this, arguments);
+        };
+      }
+      window.__tryAutoClaim = tryAutoClaim;
+      console.log('%c✓ Auto-claim orphan company installed','color:#10b981');
+    })();
+
+    // ============================================================
+    // [ADD] Force-refresh state.members from Firestore on demand + safety retry
+    // Ensures dashboard waits for member list before rendering "no company"
+    // ============================================================
+    (function ensureMembersLoaded(){
+      if (window.__ensureMembersInstalled) return;
+      window.__ensureMembersInstalled = true;
+      const _prev = window.openLeaderDashboard;
+      if (typeof _prev !== 'function') return;
+      window.openLeaderDashboard = function(){
+        const ms = (window.state && state.members) || [];
+        if (!ms.length) {
+          // members not loaded yet — show loading, then retry
+          try {
+            if (typeof navigate === 'function') navigate('leader-dashboard');
+            const body = document.getElementById('ld-body');
+            if (body) body.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-grey);"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><div style="margin-top:1rem;">جاري تحميل بيانات الأعضاء...</div></div>';
+          } catch(_){}
+          setTimeout(() => _prev.apply(this, arguments), 800);
+          setTimeout(() => _prev.apply(this, arguments), 2000);
+          return;
+        }
+        return _prev.apply(this, arguments);
+      };
+      console.log('%c✓ Members-load safety installed','color:#10b981');
+    })();
+
+    // ============================================================
+    // [ADD] Global error surfacing — catches silent JS errors / promise rejections
+    // ============================================================
+    (function globalErrorTrap(){
+      if (window.__errTrapInstalled) return;
+      window.__errTrapInstalled = true;
+      window.addEventListener('error', (e) => {
+        try { console.error('%c[masar global error]', 'color:#ef4444;font-weight:bold', e.message, 'at', e.filename + ':' + e.lineno, e.error || ''); } catch(_){}
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        try { console.error('%c[masar unhandled promise]', 'color:#ef4444;font-weight:bold', e.reason); } catch(_){}
+      });
+      console.log('%c✓ Global error trap installed','color:#10b981');
+    })();
+
+    // ============================================================
+    // [ADD] Override populateLeaderDashboardPicker + renderCompanyChats
+    // (the student-page paths that bypass openLeaderDashboard / openCompanyChats)
+    // ============================================================
+    (function patchStudentPaths(){
+      if (window.__studentPathsPatched) return;
+      function low(s){ return String(s||'').trim().toLowerCase(); }
+      function tryInstall(){
+        if (window.__studentPathsPatched) return;
+        if (typeof window.populateLeaderDashboardPicker !== 'function' || typeof window.renderCompanyChats !== 'function') {
+          setTimeout(tryInstall, 500); return;
+        }
+        window.__studentPathsPatched = true;
+
+        const matchAny = (val, myUid, myEmail, myName) => {
+          if (!val) return false;
+          if (typeof val === 'object') return matchAny(val.uid,myUid,myEmail,myName) || matchAny(val.email,myUid,myEmail,myName) || matchAny(val.name,myUid,myEmail,myName);
+          const lf = low(val);
+          return lf && (lf === myUid || lf === myEmail || lf === myName);
+        };
+
+        // ---- patch populateLeaderDashboardPicker (used by renderStudentLeader) ----
+        const _origPop = window.populateLeaderDashboardPicker;
+        window.populateLeaderDashboardPicker = function(){
+          try {
+            // Trigger heal + auto-claim first
+            try { if (typeof window.__tryAutoClaim === 'function') window.__tryAutoClaim(); } catch(_){}
+            const u = window.state && state.currentUser;
+            const picker = document.getElementById('ld-company-picker');
+            const body = document.getElementById('ld-body');
+            if (!u || !picker) return _origPop.apply(this, arguments);
+            const cos = (typeof loadCompanies === 'function') ? loadCompanies() : [];
+            const isAdmin = (typeof permIsAdmin === 'function') && permIsAdmin();
+            const myUid = low(u.uid), myEmail = low(u.email), myName = low(u.name);
+            const led = isAdmin ? cos : cos.filter(c => {
+              if (matchAny(c.leaderUid, myUid, myEmail, myName)) return true;
+              if (matchAny(c.leader, myUid, myEmail, myName)) return true;
+              if (matchAny(c.leaderEmail, myUid, myEmail, myName)) return true;
+              if (matchAny(c.leaderName, myUid, myEmail, myName)) return true;
+              return false;
+            });
+            console.group('[student-leader diag]');
+            console.log('user:', { uid: u.uid, email: u.email, name: u.name });
+            console.log('isAdmin:', isAdmin, 'totalCompanies:', cos.length, 'led:', led.length);
+            cos.forEach((c,i) => console.log('  c['+i+']', { id:c.id, name:c.name, leaderUid:c.leaderUid, leader:c.leader }));
+            console.groupEnd();
+            if (!led.length) {
+              picker.innerHTML = '<option>—</option>';
+              if (body) {
+                const diagHTML = '<div style="margin-top:1rem; font-size:.75rem; background:#f9fafb; padding:.75rem; border-radius:8px; text-align:right; max-width:600px; margin:1rem auto;">' +
+                  '<strong>معلومات تشخيصية:</strong><br>' +
+                  'بريدك: <code>' + (u.email||'—') + '</code><br>' +
+                  'اسمك: <code>' + (u.name||'—') + '</code><br>' +
+                  'معرّفك (uid): <code style="word-break:break-all;">' + (u.uid||'—') + '</code><br>' +
+                  'عدد الشركات: <strong>' + cos.length + '</strong><br>' +
+                  (cos.length ? '<br><strong>الشركات:</strong><br>' + cos.map(c => '• ' + (c.name||'?') + ' — قائدها: <code>' + (c.leaderUid||c.leader||'—') + '</code>').join('<br>') : '') +
+                  '</div>' +
+                  (cos.length ? '<div style="margin-top:1rem; text-align:center;"><button class="btn btn-warning" onclick="window.__forceClaimCompany()"><i class="fas fa-tools"></i> إصلاح: اربط أول شركة بحسابي</button></div>' : '');
+                body.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-grey);"><i class="fas fa-crown" style="font-size:3rem; opacity:.3;"></i><div style="margin-top:1rem;">لا تقود أي شركة حالياً</div>' + diagHTML + '</div>';
+              }
+              return;
+            }
+            picker.innerHTML = led.map(c => '<option value="' + c.id + '">' + (c.logo||'🏢') + ' ' + (c.name||'') + (c.archived?' (مؤرشفة)':'') + '</option>').join('');
+            if (typeof renderLeaderDashboardPanel === 'function') renderLeaderDashboardPanel();
+          } catch(e) { console.error('populateLeaderDashboardPicker patch err', e); return _origPop.apply(this, arguments); }
+        };
+
+        // ---- patch renderCompanyChats (used by renderStudentCoChat) ----
+        const _origRC = window.renderCompanyChats;
+        window.renderCompanyChats = function(){
+          try {
+            try { if (typeof window.__tryAutoClaim === 'function') window.__tryAutoClaim(); } catch(_){}
+            const u = window.state && state.currentUser;
+            const body = document.getElementById('company-chats-body');
+            if (!u || !body) return _origRC.apply(this, arguments);
+            const cos = (typeof loadCompanies === 'function') ? loadCompanies() : [];
+            const isAdmin = (typeof permIsAdmin === 'function') && permIsAdmin();
+            const myUid = low(u.uid), myEmail = low(u.email), myName = low(u.name);
+            const matchEntry = e => {
+              if (!e) return false;
+              if (typeof e === 'string') { const lf = low(e); return lf===myUid||lf===myEmail||lf===myName; }
+              return (e.uid && low(e.uid)===myUid) || (e.email && low(e.email)===myEmail) || (e.name && low(e.name)===myName);
+            };
+            const accessible = isAdmin ? cos : cos.filter(c => {
+              if (matchAny(c.leaderUid, myUid, myEmail, myName)) return true;
+              if (matchAny(c.leader, myUid, myEmail, myName)) return true;
+              return ['executives','creators','board'].some(k => Array.isArray(c[k]) && c[k].some(matchEntry));
+            });
+            console.log('[company-chats diag] user:', u.email, 'accessible:', accessible.length, 'of', cos.length);
+            if (!accessible.length) {
+              body.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-grey);">لست منتسباً لأي شركة بعد<br><br>' +
+                (cos.length ? '<button class="btn btn-warning" onclick="window.__forceClaimCompany()"><i class="fas fa-tools"></i> إصلاح: اربط أول شركة بحسابي</button>' : '') +
+                '</div>';
+              return;
+            }
+            return _origRC.apply(this, arguments);
+          } catch(e) { console.error('renderCompanyChats patch err', e); return _origRC.apply(this, arguments); }
+        };
+
+        console.log('%c✓ Student-paths patched (populateLeaderDashboardPicker + renderCompanyChats)','color:#10b981');
+      }
+      tryInstall();
+    })();
+
+    // ============================================================
+    // [ADD] Sanity self-check — verifies critical IDs + functions exist
+    // ============================================================
+    (function sanityCheck(){
+      setTimeout(() => {
+        const ids = ['ld-body','ld-tab-content','ld-company-picker','mpm-section','leader-dashboard'];
+        const fns = ['openLeaderDashboard','MasarDB','loadCompanies','navigate'];
+        const missingIds = ids.filter(id => !document.getElementById(id));
+        const missingFns = fns.filter(f => typeof window[f] === 'undefined');
+        if (missingIds.length || missingFns.length) {
+          console.warn('%c[sanity] missing:', 'color:#f59e0b', { ids: missingIds, fns: missingFns });
+        } else {
+          console.log('%c✓ Sanity check passed (all critical IDs + functions present)','color:#10b981');
+        }
+      }, 4000);
+    })();
+
+  </script>
 
 </body>
-</html>
-    
-  </body>
-  
 </html>
